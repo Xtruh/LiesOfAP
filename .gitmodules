@@ -1,3 +1,18 @@
 [submodule "RE-UE4SS"]
 	path = RE-UE4SS
 	url = https://github.com/UE4SS-RE/RE-UE4SS.git
+[submodule "LiesOfAP/dependencies/apclientpp"]
+	path = LiesOfAP/dependencies/apclientpp
+	url = https://github.com/black-sliver/apclientpp.git
+[submodule "LiesOfAP/dependencies/json"]
+	path = LiesOfAP/dependencies/json
+	url = https://github.com/nlohmann/json.git
+[submodule "LiesOfAP/dependencies/valijson"]
+	path = LiesOfAP/dependencies/valijson
+	url = https://github.com/tristanpenman/valijson.git
+[submodule "LiesOfAP/dependencies/websocketpp"]
+	path = LiesOfAP/dependencies/websocketpp
+	url = https://github.com/zaphoyd/websocketpp.git
+[submodule "LiesOfAP/dependencies/wswrap"]
+	path = LiesOfAP/dependencies/wswrap
+	url = https://github.com/black-sliver/wswrap.git
