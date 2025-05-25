@@ -4,18 +4,15 @@
 
 #include "Mod/CppUserModBase.hpp"
 
-#include "apclient.hpp"
-#include "apuuid.hpp"
+#include "Client.hpp"
 
-class LiesOFAP : public RC::CppUserModBase
+class LiesOfAP : public RC::CppUserModBase
 {
 public:
-    APClient* ap;
-    std::string uuid = ap_get_uuid("");
 
-    LiesOFAP() : CppUserModBase()
+    LiesOfAP() : CppUserModBase()
     {
-        ModName = STR("LiesOFAP");
+        ModName = STR("LiesOfAP");
         ModVersion = STR("1.0");
         ModDescription = STR("A Lies Of P Randomizer made for the Archipelago multiworld randomizer");
         ModAuthors = STR("Ninjakakes, Xtruh");
@@ -25,28 +22,19 @@ public:
         
     }
 
-    ~LiesOFAP() override
+    ~LiesOfAP() override
     {
-        if (ap)
-            delete ap;
+        Client::Disconnect();
     }
 
     auto on_update() -> void override
     {
-        if (ap)
-            ap->poll();
+        Client::PollServer();
     }
 
     auto on_unreal_init() -> void override
     {
-        ap = new APClient(uuid, "Clique");
-        ap->set_room_info_handler([&]() 
-            {
-            int items_handling = 0b111;
-            APClient::Version version{ 0, 6, 2 };
-            ap->ConnectSlot("Player1", "", items_handling, {}, version);
-            }
-        );
+        Client::Connect("localhost:38281", "Player1", "");
     }
 };
 
@@ -54,7 +42,7 @@ extern "C"
 {
     __declspec(dllexport) RC::CppUserModBase* start_mod()
     {
-        return new LiesOFAP();
+        return new LiesOfAP();
     }
 
     __declspec(dllexport) void uninstall_mod(RC::CppUserModBase* mod)

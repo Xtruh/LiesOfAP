@@ -3,6 +3,7 @@ local projectName = "LiesOfAP"
 target(projectName)
     add_rules("ue4ss.mod")
     add_includedirs(".")
+    add_includedirs("include")
     add_includedirs("dependencies/apclientpp")
     add_includedirs("dependencies/json/include")
     add_includedirs("dependencies/valijson/include")
@@ -20,6 +21,9 @@ target(projectName)
     add_links("libssl")
 
     add_files("dllmain.cpp")
+    add_files("src/*.cpp")
+
+    add_headerfiles("include/*.hpp", {install = false})
 
     add_defines("_WIN32_WINNT=0x0600")
 
