@@ -3,224 +3,235 @@
 #include "Mod/CppUserModBase.hpp"
 #include "Unreal/UObjectGlobals.hpp"
 #include "Unreal/UFunction.hpp"
+#include "Unreal/UScriptStruct.hpp"
+#include "Unreal/Property/FStructProperty.hpp"
 
 #include "IDs.hpp"
 #include "Client.hpp"
 
+RC::Unreal::FString* RetriveSaveNamePointer()
+{
+	using namespace RC::Unreal;
+	//Get SaveGame
+	auto saveGame = UObjectGlobals::FindFirstOf(STR("LCharacterSaveGame"));
+
+	if (!saveGame)
+	{
+		Output::send(STR("Couldn't get SaveGame Instance!\n"));
+		return nullptr;
+	}
+
+	auto characterSaveProperty = static_cast<FStructProperty*>(saveGame->GetPropertyByNameInChain(STR("CharacterSaveData")));
+
+	auto characterSavaData = characterSaveProperty->GetStruct();
+
+	auto characterSave = characterSaveProperty->ContainerPtrToValuePtr<void>(saveGame);
+
+	auto saveNameProperty = characterSavaData->GetPropertyByNameInChain(STR("CharacterName"));
+
+	auto saveName = saveNameProperty->ContainerPtrToValuePtr<FString>(characterSave);
+	return saveName;
+}
+
+std::wstring GameData::GetSaveName()
+{
+	using namespace RC::Unreal;
+
+	auto saveName = RetriveSaveNamePointer();
+	if (!saveName)
+		return L"";
+
+	return saveName->GetCharArray();
+}
+
+void GameData::SetSaveName(const std::wstring& name)
+{
+	using namespace RC::Unreal;
+
+	auto saveName = RetriveSaveNamePointer();
+	if (!saveName)
+		return;
+
+	*saveName = FString(name.c_str());
+}
+
 void GameData::CheckItemSpots()
 {
-    using namespace RC::Unreal;
+	using namespace RC::Unreal;
 
-    std::vector<UObject*> ItemSpots;
-    UObjectGlobals::FindAllOf(STR("LPropItemSpot"), ItemSpots);
+	std::vector<UObject*> ItemSpots;
+	UObjectGlobals::FindAllOf(STR("LPropItemSpot"), ItemSpots);
 
-    if (!ItemSpots.empty())
-    {
-        // Output::send<LogLevel::Verbose>(STR("Found {} Item Spots\n"), ItemSpots.size());
-        for (UObject* ItemSpot : ItemSpots)
-        {
-            auto state = *ItemSpot->GetValuePtrByPropertyNameInChain<int32>(STR("PropState"));
+	if (!ItemSpots.empty())
+	{
+		// Output::send<LogLevel::Verbose>(STR("Found {} Item Spots\n"), ItemSpots.size());
+		for (UObject* ItemSpot : ItemSpots)
+		{
+			auto state = *ItemSpot->GetValuePtrByPropertyNameInChain<int32>(STR("PropState"));
 
-            if (ItemSpot->GetName().starts_with(STR("LDynamicPropItemSpot")))
-                continue;
+			if (ItemSpot->GetName().starts_with(STR("LDynamicPropItemSpot")))
+				continue;
 
-            //Output::send<LogLevel::Verbose>(STR("{}: {} \n"), ItemSpot->GetName(), state);
-            if (state != 2)
-                continue;
+			//Output::send<LogLevel::Verbose>(STR("{}: {} \n"), ItemSpot->GetName(), state);
+			if (state != 2)
+				continue;
 
-            auto spotCodename = ItemSpot->GetValuePtrByPropertyNameInChain<FName>(STR("ItemPackageCodeName"));
-            if (!spotCodename)
-            {
-                Output::send<LogLevel::Error>(STR("No Code name found?\n"));
-            }
+			auto spotCodename = ItemSpot->GetValuePtrByPropertyNameInChain<FName>(STR("ItemPackageCodeName"));
+			if (!spotCodename)
+			{
+				Output::send<LogLevel::Error>(STR("No Code name found?\n"));
+			}
 
-            std::vector<int> locationIds = ID::LOCCODENAME_TO_ID[spotCodename->ToString()];
-            for (int id : locationIds)
-            {
-                Client::SendCheck(id);
-                if (id == 29)
-                {
-                    //Client::SendGoal();
-                }
-            }
-        }
-    }
+			std::vector<int> locationIds = ID::LOCCODENAME_TO_ID[spotCodename->ToString()];
+			for (int id : locationIds)
+			{
+				Client::SendCheck(id);
+				if (id == 29)
+				{
+					//Client::SendGoal();
+				}
+			}
+		}
+	}
 }
 
 void GameData::CheckEnemySpots()
 {
-    using namespace RC::Unreal;
+	using namespace RC::Unreal;
 
-    std::vector<UObject*> NPCSpots;
-    UObjectGlobals::FindAllOf(STR("LNPCSpot"), NPCSpots);
-    if (!NPCSpots.empty())
-    {
-        for (UObject* NPCSpot : NPCSpots)
-        {
-            auto important = *NPCSpot->GetValuePtrByPropertyNameInChain<bool>(STR("bImportantNPC"));
-            auto dead = *NPCSpot->GetValuePtrByPropertyNameInChain<bool>(STR("IsDeadState"));
+	std::vector<UObject*> NPCSpots;
+	UObjectGlobals::FindAllOf(STR("LNPCSpot"), NPCSpots);
+	if (!NPCSpots.empty())
+	{
+		for (UObject* NPCSpot : NPCSpots)
+		{
+			auto important = *NPCSpot->GetValuePtrByPropertyNameInChain<bool>(STR("bImportantNPC"));
+			auto dead = *NPCSpot->GetValuePtrByPropertyNameInChain<bool>(STR("IsDeadState"));
 
-            if (!important || !dead)
-                continue;
-            // Output::send<LogLevel::Verbose>(STR("{}: IS IMPORTANT AND DEAD \n"), NPCSpot->GetName());
+			if (!important || !dead)
+				continue;
+			// Output::send<LogLevel::Verbose>(STR("{}: IS IMPORTANT AND DEAD \n"), NPCSpot->GetName());
 
-            auto spotCodename = NPCSpot->GetValuePtrByPropertyNameInChain<FName>(STR("SpotCodeName"));
-            if (!spotCodename)
-            {
-                Output::send<LogLevel::Error>(STR("No Code name found?\n"));
-            }
+			auto spotCodename = NPCSpot->GetValuePtrByPropertyNameInChain<FName>(STR("SpotCodeName"));
+			if (!spotCodename)
+			{
+				Output::send<LogLevel::Error>(STR("No Code name found?\n"));
+			}
 
-            std::vector<int> locationIds = ID::LOCCODENAME_TO_ID[spotCodename->ToString()];
-            for (int id : locationIds)
-                Client::SendCheck(id);
-        }
-    }
+			std::vector<int> locationIds = ID::LOCCODENAME_TO_ID[spotCodename->ToString()];
+			for (int id : locationIds)
+				Client::SendCheck(id);
+		}
+	}
 }
 
 void GameData::CheckQuests()
 {
-    using namespace RC::Unreal;
+	using namespace RC::Unreal;
 
-    auto QuestSystem = UObjectGlobals::FindFirstOf(STR("LQuestSystem"));
-    if (!QuestSystem)
-        return;
+	auto QuestSystem = UObjectGlobals::FindFirstOf(STR("LQuestSystem"));
+	if (!QuestSystem)
+		return;
 
-    auto questCompleteFunction = QuestSystem->GetFunctionByNameInChain(STR("IsCompleteQuest"));
-    if (!questCompleteFunction)
-        return;
+	auto questCompleteFunction = QuestSystem->GetFunctionByNameInChain(STR("IsCompleteQuest"));
+	if (!questCompleteFunction)
+		return;
 
-    struct FQuestCompleteParams
-    {
-        FName CodeName;
+	struct FQuestCompleteParams
+	{
+		FName CodeName;
 
-        bool Result;
-    };
+		bool Result;
+	};
 
-    for (std::wstring questName : ID::QUESTS)
-    {
-        FQuestCompleteParams params{ FName(questName), false };
-        QuestSystem->ProcessEvent(questCompleteFunction, &params);
+	for (std::wstring questName : ID::QUESTS)
+	{
+		FQuestCompleteParams params{ FName(questName), false };
+		QuestSystem->ProcessEvent(questCompleteFunction, &params);
 
-        if (params.Result)
-        {
-            //Output::send<LogLevel::Verbose>(STR("{}: Quest Completed \n"), questName);
-            std::vector<int> locationIds = ID::LOCCODENAME_TO_ID[questName];
-            for (int id : locationIds)
-                Client::SendCheck(id);
-        }
-    }
+		if (params.Result)
+		{
+			//Output::send<LogLevel::Verbose>(STR("{}: Quest Completed \n"), questName);
+			std::vector<int> locationIds = ID::LOCCODENAME_TO_ID[questName];
+			for (int id : locationIds)
+				Client::SendCheck(id);
+		}
+	}
 
 }
 
-void GameData::ReceiveItem(int64_t id)
+bool GameData::ReceiveItem(int64_t id)
 {
-    auto codename = ID::ITEMID_TO_CODENAME[id];
+	if (id > 600 && id < 700)
+	{
+		return GiveWeapon(id);
+	}
 
-	GiveItem(codename, 1);
+	auto codename = ID::ITEMID_TO_CODENAME[id];
+
+	return GiveItem(codename);
 }
 
-bool GameData::GiveItem(const std::wstring& codename, int quantity)
+bool GameData::GiveItem(const std::wstring& codename)
 {
-    using namespace RC::Unreal;
-    //Get player inventory
-    auto PlayerInventory = UObjectGlobals::FindFirstOf(STR("LPlayerInventory"));
+	using namespace RC::Unreal;
+	//Get player
+	auto player = UObjectGlobals::FindFirstOf(STR("BP_CH_PC_Pino_C"));
 
-    if (!PlayerInventory)
-    {
-        Output::send(STR("Couldn't get PlayerInventory Instance!\n"));
-        return false;
-    }
+	if (!player)
+	{
+		Output::send(STR("Couldn't get Player Instance!\n"));
+		return false;
+	}
 
-    //Get Item system
-    auto ItemSystem = UObjectGlobals::FindFirstOf(STR("LItemSystem"));
+	UFunction* gainItem = player->GetFunctionByNameInChain(L"OnGainItem");
+	if (!gainItem)
+	{
+		Output::send(STR("Failed to find function OnGainItem\n"));
+		return false;
+	}
 
-    if (!ItemSystem)
-    {
-        Output::send(STR("Couldn't get ItemSystem Instance!\n"));
-        return false;
-    }
+	struct GainItemParams
+	{
+		FName codename;
+		int32 quantity;
+	}gainItemParams{ FName(codename), 1 };
 
-    // Try to find the item in the player inventory
-    UFunction* finditem = PlayerInventory->GetFunctionByName(L"FindItemByCodeName");
-    if (!finditem)
-    {
-        Output::send(STR("Failed to find function FindItemByCodeName\n"));
-        return false;
-    }
+	player->ProcessEvent(gainItem, &gainItemParams);
+	return true;
+}
 
-    struct FFindItemParams
-    {
-        FName CodeName;
+bool GameData::GiveWeapon(int64_t id)
+{
+	using namespace RC::Unreal;
 
-        UObject* InventoryItem;
-    }FindItemParams{ FName(codename), nullptr };
+	auto handle_codename = ID::ITEMID_TO_CODENAME[id + 100];
+	auto blade_codename = ID::ITEMID_TO_CODENAME[id + 200];
 
-    PlayerInventory->ProcessEvent(finditem, &FindItemParams);
+	//Get player
+	auto player = UObjectGlobals::FindFirstOf(STR("BP_CH_PC_Pino_C"));
 
-    UObject* InventoryItem = FindItemParams.InventoryItem;
+	if (!player)
+	{
+		Output::send(STR("Couldn't get Player Instance!\n"));
+		return false;
+	}
 
-    if (!InventoryItem)
-    {
-        // create a new item if one isn't in the invetory
-        UFunction* createitem = ItemSystem->GetFunctionByName(L"CreateItem");
-        if (!createitem)
-        {
-            Output::send(STR("Failed to find function CreateItem\n"));
-            return false;
-        }
+	UFunction* gainWeapon = player->GetFunctionByNameInChain(L"OnGainWeapon");
+	if (!gainWeapon)
+	{
+		Output::send(STR("Failed to find function OnGainWeapon\n"));
+		return false;
+	}
 
-        struct FCreateItemParams
-        {
-            FName CodeName;
+	struct GainWeaponParams
+	{
+		FName handleCodename;
+		FName bladeCodename;
 
-            UObject* Item;
-        };
-        FCreateItemParams CreateItemParams;
+		int32 level;
+	}gainWeaponParams{ FName(handle_codename), FName(blade_codename), 0 };
 
-        CreateItemParams.CodeName = FName(codename);
-
-        ItemSystem->ProcessEvent(createitem, &CreateItemParams);
-
-        UObject* Item = CreateItemParams.Item;
-        if (!Item) {
-
-            Output::send(STR("Item could not be create Item Codename likely wrong: {}"), codename);
-            return false;
-        }
-        Output::send(STR("Item created"));
-        UFunction* additem = PlayerInventory->GetFunctionByName(L"AddItem");
-        if (!additem) {
-
-            Output::send(STR("Couldn't find add item function"));
-            return false;
-        }
-        struct FAddItemParams {
-            UObject* Item;
-            bool ItemAdded;
-        };
-
-        FAddItemParams AddItemParams;
-        AddItemParams.Item = Item;
-
-        PlayerInventory->ProcessEvent(additem, &AddItemParams);
-
-        quantity = quantity - 1;
-        InventoryItem = Item;
-    }
-    else {
-
-        Output::send(STR("Item found in inventory"));
-    }
-
-    //try to add item to inventory if item is already in the inventory
-    int32* ItemProperty = InventoryItem->GetValuePtrByPropertyName<int32>(STR("ItemCount"));
-    if (!ItemProperty) {
-
-        Output::send(STR("Couldn't find item property"));
-        return false;
-
-    }
-
-    *ItemProperty += quantity;
-    return true;
+	player->ProcessEvent(gainWeapon, &gainWeaponParams);
+	return true;
 }
