@@ -160,6 +160,32 @@ void GameData::CheckQuests()
 
 }
 
+bool GameData::CheckDeath()
+{
+	using namespace RC::Unreal;
+	//Get player
+	auto player = UObjectGlobals::FindFirstOf(STR("BP_CH_PC_Pino_C"));
+
+	if (!player)
+	{
+		Output::send(STR("Couldn't get Player Instance!\n"));
+		return false;
+	}
+
+	UFunction* isDeadFunction = player->GetFunctionByNameInChain(L"IsDead");
+	if (!isDeadFunction)
+	{
+		Output::send(STR("Failed to find function IsDead\n"));
+		return false;
+	}
+
+	bool isDead = false;
+
+	player->ProcessEvent(isDeadFunction, &isDead);
+
+	return isDead;
+}
+
 bool GameData::ReceiveItem(int64_t id)
 {
 	if (id > 600 && id < 700)
@@ -234,4 +260,48 @@ bool GameData::GiveWeapon(int64_t id)
 
 	player->ProcessEvent(gainWeapon, &gainWeaponParams);
 	return true;
+}
+
+void GameData::ReceiveDeath()
+{
+	using namespace RC::Unreal;
+
+	//Get player
+	auto player = UObjectGlobals::FindFirstOf(STR("BP_CH_PC_Pino_C"));
+
+	UFunction* receiveDamage = player->GetFunctionByNameInChain(L"ReceiveDamage");
+	if (!receiveDamage)
+	{
+		Output::send(STR("Failed to find function OnGainWeapon\n"));
+		return;
+	}
+
+	struct ReceiveDamageParams
+	{
+		struct Input
+		{
+			int64 HitProcContext;
+			int32 Damage;
+			int64 Attacker;
+			FName SkillHitCodeName;
+			int64 HitComponent;
+			TMap<uint8, float> PhysicalDamages;
+			TMap<uint8, float> ElementDamages;
+			uint8 bIsGuarding;
+			uint8 bSkipUIUpdate;
+			uint8 bIsFallingDamage;
+			uint8 bRegainBlock;
+		}Input;
+
+		struct Output
+		{
+			int32 OutDamage;
+			FName HitPartsName;
+			bool bHitPartsDestoryed;
+			int32 DamageCurrentHP;
+		}Output;
+
+	}receiveDamageParams{ {0,5000,0,FName(),0,TMap<uint8,float>(),TMap<uint8,float>(),0,0,0,0},{0,FName(),false,0} };
+
+	player->ProcessEvent(receiveDamage, &receiveDamageParams);
 }

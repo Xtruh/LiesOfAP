@@ -43,10 +43,14 @@ public:
 	{
 		using namespace RC::Unreal;
 
-		Client::PollServer();
-		GameData::CheckItemSpots();
-		GameData::CheckEnemySpots();
-		GameData::CheckQuests();
+		if (Client::Connected())
+		{
+			Client::PollServer();
+			GameData::CheckItemSpots();
+			GameData::CheckEnemySpots();
+			GameData::CheckQuests();
+			Client::SendDeath(GameData::CheckDeath());
+		}
 	}
 
 	auto on_unreal_init() -> void override
@@ -84,13 +88,13 @@ public:
 					return false;
 				}
 
-				if (tokens.size() > 4 || tokens.size() <= 2)
-				{
-					return false;
-				}
-
 				if (tokens[0] == STR("/connect"))
 				{
+					if (tokens.size() > 4 || tokens.size() <= 2)
+					{
+						return false;
+					}
+
 					if (tokens.size() > 3)
 					{
 						Client::Connect(ws2s(tokens[1]), ws2s(tokens[2]), ws2s(tokens[3]));
@@ -99,6 +103,10 @@ public:
 					{
 						Client::Connect(ws2s(tokens[1]), ws2s(tokens[2]), "");
 					}
+				}
+				else if (tokens[0] == STR("/deathlink"))
+				{
+					Client::ToggleDeathLink();
 				}
 
 

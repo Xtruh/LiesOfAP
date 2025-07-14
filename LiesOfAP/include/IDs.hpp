@@ -652,16 +652,13 @@ namespace ID
 		{L"CH02_Puppet_Judge_Boss_00", {73, 74, 75, 76, 77}},
 		{L"Letter_Venigni_Caution", {78}},
 		{L"Geppetto_F00", {79}},
+
+
 	};
 
 	inline std::vector<std::wstring> QUESTS =
 	{
 		L"Geppetto_nst_E01A",
 		L"Geppetto_F00",
-	};
-
-	inline std::vector<int> NEEDS_WORLD_EVENT =
-	{
-		105, 106, 1502, 1503
 	};
 }

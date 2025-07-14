@@ -7,6 +7,8 @@ namespace Client {
 	bool Connected();
 	void SendCheck(int64_t id);
 	void SendGoal();
+	void SendDeath(bool dead);
+	void ToggleDeathLink();
 	void PollServer();
 	void Disconnect();
 }
