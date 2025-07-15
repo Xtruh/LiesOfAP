@@ -3,6 +3,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <set>
 
 namespace ID
 {
@@ -73,7 +74,7 @@ namespace ID
 		{210, L"Consume_Buff_SlaveMagazine"},
 		{211, L"Consume_Buff_Special"},
 		{212, L"Consume_Cancel_Special"},
-		{213, L"Buff_sharpness_regain"},
+		{213, L"Consume_Buff_sharpness_regain"},
 		{214, L"Consume_Area_acid"},
 		{215, L"Consume_Throw_Granade_Acid"},
 		{216, L"Consume_Throw_toughness_break"},
@@ -617,7 +618,7 @@ namespace ID
 		{L"Ch02_ItemSpot37", {35}},
 		{L"Ch02_ItemSpot08", {36}},
 		{L"Ch02_ItemSpot10", {37}},
-		{L"Ch02_ItemSpot37", {38}},
+		{L"Ch02_ItemSpot07", {38}},
 		{L"Ch02_ItemSpot06", {39}},
 		{L"Ch02_ItemSpot09", {40}},
 		{L"Ch02_ItemSpot11", {41}},
@@ -637,7 +638,7 @@ namespace ID
 		{L"Ch02_ItemSpot38", {55}},
 		{L"Ch02_ItemSpot24", {56}},
 		{L"Ch02_ItemSpot21", {57}},
-		{L"CH02_Die_Named_01", {58}},
+		{L"CH02_Puppet_Police_Named_00", {58}},
 		{L"Ch02_ItemSpot41", {59}},
 		{L"Ch02_ItemSpot26", {60}},
 		{L"Ch02_ItemSpot27", {61}},
@@ -653,12 +654,77 @@ namespace ID
 		{L"Letter_Venigni_Caution", {78}},
 		{L"Geppetto_F00", {79}},
 
-
+		// CH 03
+		{L"Ch03_ItemSpot01", {80}},
+		{L"Letter_Factory_MiracleCure", {81}},
+		{L"Ch03_ItemSpot04", {82}},
+		{L"Ch03_ItemSpot05", {83}},
+		{L"Ch03_ItemSpot03", {84}},
+		{L"Ch03_ItemSpot06", {85}},
+		{L"Ch03_ItemSpot07", {86}},
+		{L"Ch03_ItemSpot51", {87}},
+		{L"Ch03_ItemSpot08", {88}},
+		{L"Ch03_ItemSpot53", {89}},
+		{L"Ch03_ItemSpot09", {90}},
+		{L"Ch03_ItemSpot10", {91}},
+		{L"Ch03_ItemSpot12", {92}},
+		{L"Ch03_ItemSpot37", {93}},
+		{L"FactoryMaster_memo", {94}},
+		{L"Ch03_ItemSpot11", {95}},
+		{L"Ch03_ItemSpot14", {96}},
+		{L"CH03_Puppet_DefenseWall_Named_00", {97, 98}},
+		{L"CH03_RedButterFly_Red_00", {99}},
+		{L"Ch03_ItemSpot16", {100}},
+		{L"Ch03_ItemSpot17", {101}},
+		{L"Ch03_ItemSpot44", {102}},
+		{L"Ch03_ItemSpot45", {103}},
+		{L"Ch03_ItemSpot47", {104}},
+		{L"CH03_RedButterFly_Red_01", {105}},
+		{L"Ch03_ItemSpot50", {106}},
+		{L"Ch03_ItemSpot48", {107}},
+		{L"Ch03_ItemSpot20", {108}},
+		{L"Ch03_ItemSpot19", {109}},
+		{L"Ch03_ItemSpot21", {110}},
+		{L"Ch03_ItemSpot18", {111}},
+		{L"Ch03_ItemSpot52", {112}},
+		{L"Ch03_ItemSpot22", {113}},
+		{L"Ch03_ItemSpot23", {114}},
+		{L"Ch03_ItemSpot27", {115}},
+		{L"Ch03_ItemSpot35", {116}},
+		{L"Ch03_ItemSpot15", {117}},
+		{L"Ch03_ItemSpot36", {118, 119}},
+		{L"Ch03_ItemSpot33", {120}},
+		{L"CH03_Puppet_FireStoker_Named_00", {121, 122}},
+		{L"Ch03_ItemSpot32", {123}},
+		{L"Letter_Gentleman_News", {124}},
+		{L"Ch03_ItemSpot24", {125}},
+		{L"Letter_Factory_Doctor", {126}},
+		{L"CH03_Stalker_SurvivorStalker_00", {127, 128}},
+		{L"Ch03_ItemSpot55", {129}},
+		{L"CH03_Puppet_Tomorrow_Seed_00", {130, 131}},
+		{L"Ch03_ItemSpot31", {132}},
+		{L"Ch03_ItemSpot30", {133}},
+		{L"Ch03_ItemSpot29", {134}},
+		{L"Ch03_ItemSpot28", {135}},
+		{L"Ch03_ItemSpot38", {136}},
+		{L"Ch03_ItemSpot54", {137}},
+		{L"Ch03_ItemSpot41", {138}},
+		{L"Ch03_ItemSpot43", {139}},
+		{L"Factory_Paskal_Letter", {140}},
+		{L"Ch03_ItemSpot39", {141}},
+		{L"Ch03_ItemSpot40", {142}},
+		{L"CH03_Puppet_FireStoker_Named_01", {143, 144}},
+		{L"CH03_Puppet_FireEater_Boss_00", {145, 146, 147}},
 	};
 
 	inline std::vector<std::wstring> QUESTS =
 	{
 		L"Geppetto_nst_E01A",
 		L"Geppetto_F00",
+	};
+
+	inline std::set<std::wstring> NPC_SPOT_NAMES =
+	{
+		L"Npc-LV_Inner_Factory_DSN-21",
 	};
 }

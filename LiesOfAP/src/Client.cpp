@@ -22,6 +22,7 @@ int lastReceivedIndex = -1;
 bool deathLink = false;
 bool isDead = false;
 std::set<int64_t> sent_ids;
+std::set<int64_t> toResend;
 
 namespace Utils
 {
@@ -133,9 +134,17 @@ void Client::Connect(const std::string uri, const std::string slotname, const st
 			{
 				if (item.index <= lastReceivedIndex)
 					continue;
-				lastReceivedIndex = item.index;
-				indexChanged = true;
 				bool recived = GameData::ReceiveItem(item.item);
+				if (recived)
+				{
+					lastReceivedIndex = item.index;
+					indexChanged = true;
+				}
+				else
+				{
+					toResend.insert(item.index);
+				}
+				
 			}
 
 			if (indexChanged)

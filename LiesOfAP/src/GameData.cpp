@@ -105,18 +105,21 @@ void GameData::CheckEnemySpots()
 	{
 		for (UObject* NPCSpot : NPCSpots)
 		{
-			auto important = *NPCSpot->GetValuePtrByPropertyNameInChain<bool>(STR("bImportantNPC"));
 			auto dead = *NPCSpot->GetValuePtrByPropertyNameInChain<bool>(STR("IsDeadState"));
 
-			if (!important || !dead)
+			if (!dead)
 				continue;
-			// Output::send<LogLevel::Verbose>(STR("{}: IS IMPORTANT AND DEAD \n"), NPCSpot->GetName());
 
 			auto spotCodename = NPCSpot->GetValuePtrByPropertyNameInChain<FName>(STR("SpotCodeName"));
 			if (!spotCodename)
 			{
 				Output::send<LogLevel::Error>(STR("No Code name found?\n"));
 			}
+
+			if (!ID::LOCCODENAME_TO_ID.contains(spotCodename->ToString()))
+				continue;
+
+			Output::send<LogLevel::Verbose>(STR("{}: ISDEAD||CODENAME: {}\n"), NPCSpot->GetName(), spotCodename->ToString());
 
 			std::vector<int> locationIds = ID::LOCCODENAME_TO_ID[spotCodename->ToString()];
 			for (int id : locationIds)
@@ -202,13 +205,26 @@ bool GameData::GiveItem(const std::wstring& codename)
 {
 	using namespace RC::Unreal;
 	//Get player
-	auto player = UObjectGlobals::FindFirstOf(STR("BP_CH_PC_Pino_C"));
+	std::vector<UObject*> players;
+	UObjectGlobals::FindAllOf(STR("BP_CH_PC_Pino_C"), players);
+	UObject* player = nullptr;
+
+	for (auto p : players)
+	{
+		if (p->GetName().starts_with(STR("BP_CH_PC_Pino_C")))
+		{
+			player = p;
+			break;
+		}
+	}
 
 	if (!player)
 	{
 		Output::send(STR("Couldn't get Player Instance!\n"));
 		return false;
 	}
+
+	Output::send(STR("Player Name: {}"), player->GetName());
 
 	UFunction* gainItem = player->GetFunctionByNameInChain(L"OnGainItem");
 	if (!gainItem)
