@@ -50,7 +50,11 @@ public:
 			GameData::CheckEnemySpots();
 			GameData::CheckQuests();
 			Client::SendDeath(GameData::CheckDeath());
+			Client::SendRingLink();
 		}
+
+		//int ergo = GameData::GetErgoAmount();
+		//Output::send<LogLevel::Verbose>(STR("Ergo: {}\n"), ergo);
 	}
 
 	auto on_unreal_init() -> void override

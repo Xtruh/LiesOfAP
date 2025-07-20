@@ -23,20 +23,104 @@ RC::Unreal::FString* RetriveSaveNamePointer()
 
 	auto characterSaveProperty = static_cast<FStructProperty*>(saveGame->GetPropertyByNameInChain(STR("CharacterSaveData")));
 
-	auto characterSavaData = characterSaveProperty->GetStruct();
+	if (!characterSaveProperty)
+	{
+		Output::send(STR("Couldn't get CharacterSaveData Prop!\n"));
+		return nullptr;
+	}
+
+	auto characterSaveData = characterSaveProperty->GetStruct();
+
+	if (!characterSaveData)
+	{
+		Output::send(STR("Couldn't get CharacterSaveData!\n"));
+		return nullptr;
+	}
 
 	auto characterSave = characterSaveProperty->ContainerPtrToValuePtr<void>(saveGame);
 
-	auto saveNameProperty = characterSavaData->GetPropertyByNameInChain(STR("CharacterName"));
+	if (!characterSave)
+	{
+		Output::send(STR("Couldn't get Character Save Instance!\n"));
+		return nullptr;
+	}
+
+	auto saveNameProperty = characterSaveData->GetPropertyByNameInChain(STR("CharacterName"));
+
+	if (!saveNameProperty)
+	{
+		Output::send(STR("Couldn't get SaveName Prop!\n"));
+		return nullptr;
+	}
 
 	auto saveName = saveNameProperty->ContainerPtrToValuePtr<FString>(characterSave);
+
+	if (!saveName)
+	{
+		Output::send(STR("Couldn't get SaveName!\n"));
+		return nullptr;
+	}
+
 	return saveName;
+}
+
+RC::Unreal::int32* RetriveErgoAmountPointer()
+{
+	using namespace RC::Unreal;
+	//Get SaveGame
+	auto saveGame = UObjectGlobals::FindFirstOf(STR("LCharacterSaveGame"));
+
+	if (!saveGame)
+	{
+		Output::send(STR("Couldn't get SaveGame Instance!\n"));
+		return nullptr;
+	}
+
+	auto characterSaveProperty = static_cast<FStructProperty*>(saveGame->GetPropertyByNameInChain(STR("CharacterSaveData")));
+
+	if (!characterSaveProperty)
+	{
+		Output::send(STR("Couldn't get CharacterSaveData Prop!\n"));
+		return nullptr;
+	}
+
+	auto characterSaveData = characterSaveProperty->GetStruct();
+
+	if (!characterSaveData)
+	{
+		Output::send(STR("Couldn't get CharacterSaveData!\n"));
+		return nullptr;
+	}
+
+	auto characterSave = characterSaveProperty->ContainerPtrToValuePtr<void>(saveGame);
+
+	if (!characterSave)
+	{
+		Output::send(STR("Couldn't get Character Save Instance!\n"));
+		return nullptr;
+	}
+
+	auto ergoAmountProperty = characterSaveData->GetPropertyByNameInChain(STR("AcquisitionSoul"));
+
+	if (!ergoAmountProperty)
+	{
+		Output::send(STR("Couldn't get Ergo Amount Prop!\n"));
+		return nullptr;
+	}
+
+	auto ergoAmount = ergoAmountProperty->ContainerPtrToValuePtr<int32>(characterSave);
+
+	if (!ergoAmount)
+	{
+		Output::send(STR("Couldn't get Ergo Amount!\n"));
+		return nullptr;
+	}
+
+	return ergoAmount;
 }
 
 std::wstring GameData::GetSaveName()
 {
-	using namespace RC::Unreal;
-
 	auto saveName = RetriveSaveNamePointer();
 	if (!saveName)
 		return L"";
@@ -53,6 +137,61 @@ void GameData::SetSaveName(const std::wstring& name)
 		return;
 
 	*saveName = FString(name.c_str());
+}
+
+int GameData::GetErgoAmount()
+{
+	auto ergoAmount = RetriveErgoAmountPointer();
+	if (!ergoAmount)
+		return -1;
+
+	return *ergoAmount;
+}
+
+void GameData::SetErgoAmount(int amount)
+{
+	using namespace RC::Unreal;
+	//Get player
+	std::vector<UObject*> players;
+	UObjectGlobals::FindAllOf(STR("BP_CH_PC_Pino_C"), players);
+	UObject* player = nullptr;
+
+	for (auto p : players)
+	{
+		if (p->GetName().starts_with(STR("BP_CH_PC_Pino_C")))
+		{
+			player = p;
+			break;
+		}
+	}
+
+	if (!player)
+	{
+		Output::send(STR("Couldn't get Player Instance!\n"));
+		return;
+	}
+
+	UFunction* gainErgo = player->GetFunctionByNameInChain(L"OnGainExp");
+	if (!gainErgo)
+	{
+		Output::send(STR("Failed to find function OnGainExp\n"));
+		return;
+	}
+
+	if (amount > 0)
+	{
+		player->ProcessEvent(gainErgo, &amount);
+	}
+	else if (amount < 0)
+	{
+		auto ergoAmount = RetriveErgoAmountPointer();
+
+		int total = std::max(-1, *ergoAmount + amount - 1);
+
+		*ergoAmount = total;
+		int one = 1;
+		player->ProcessEvent(gainErgo, &one);
+	}
 }
 
 void GameData::CheckItemSpots()
@@ -119,7 +258,7 @@ void GameData::CheckEnemySpots()
 			if (!ID::LOCCODENAME_TO_ID.contains(spotCodename->ToString()))
 				continue;
 
-			Output::send<LogLevel::Verbose>(STR("{}: ISDEAD||CODENAME: {}\n"), NPCSpot->GetName(), spotCodename->ToString());
+			//Output::send<LogLevel::Verbose>(STR("{}: ISDEAD||CODENAME: {}\n"), NPCSpot->GetName(), spotCodename->ToString());
 
 			std::vector<int> locationIds = ID::LOCCODENAME_TO_ID[spotCodename->ToString()];
 			for (int id : locationIds)

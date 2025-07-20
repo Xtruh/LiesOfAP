@@ -20,7 +20,13 @@ const std::string cert_store("ue4ss/Mods/LiesOfAP/dlls/cacert.pem");
 bool dc = false;
 int lastReceivedIndex = -1;
 bool deathLink = false;
+bool ringLink = false;
+bool hardRingLink = false;
 bool isDead = false;
+int ringRatio = 100;
+int prevErgo = -1;
+int partialRings = 0;
+int goal_id = 347;
 std::set<int64_t> sent_ids;
 std::set<int64_t> toResend;
 
@@ -81,6 +87,10 @@ void Client::Connect(const std::string uri, const std::string slotname, const st
 	lastReceivedIndex = -1;
 	dc = true;
 	deathLink = false;
+	ringLink = false;
+	hardRingLink = false;
+	prevErgo = -1;
+	partialRings = 0;
 
 	ap = new APClient(uuid, game_name, uri, cert_store);
 	ap->set_room_info_handler([slotname, password]()
@@ -120,6 +130,17 @@ void Client::Connect(const std::string uri, const std::string slotname, const st
 					tags.push_back("DeathLink");
 					deathLink = true;
 				}
+				else if (key == "ring_link" && value > 0)
+				{
+					tags.push_back("RingLink");
+					ringLink = true;
+
+					if (value == 2)
+					{
+						tags.push_back("HardRingLink");
+						hardRingLink = true;
+					}
+				}
 			}
 
 			ap->ConnectUpdate(false, 0, true, tags);
@@ -144,7 +165,7 @@ void Client::Connect(const std::string uri, const std::string slotname, const st
 				{
 					toResend.insert(item.index);
 				}
-				
+
 			}
 
 			if (indexChanged)
@@ -155,14 +176,24 @@ void Client::Connect(const std::string uri, const std::string slotname, const st
 			Output::send(STR("receiving bounce: {}"), Utils::s2ws(data.dump()));
 
 			auto tags = data.find("tags"); // This will either be data.end() or an array of tags.
-			if (tags == data.end()) 
+			if (tags == data.end())
 			{
 				return; // Just ignore non-deathlink bounces.
 			}
 
 			bool is_deathlink = std::find(tags->begin(), tags->end(), "DeathLink") != tags->end();
+			bool is_ringLink = std::find(tags->begin(), tags->end(), "RingLink") != tags->end();
+			bool is_hardRingLink = std::find(tags->begin(), tags->end(), "HardRingLink") != tags->end();
+
 			if (is_deathlink)
+			{
+				isDead = true;
 				GameData::ReceiveDeath();
+			}
+			else if (is_ringLink || is_hardRingLink)
+			{
+				Client::ReciveRingLink(data);
+			}
 
 		});
 }
@@ -185,6 +216,9 @@ void Client::SendCheck(int64_t id)
 
 	std::list<int64_t> id_list{ id };
 	ap->LocationChecks(id_list);
+
+	if (id == goal_id)
+		SendGoal();
 }
 
 void Client::SendGoal()
@@ -226,6 +260,68 @@ void Client::SendDeath(bool dead)
 		ap->Bounce(data, {}, {}, { "DeathLink" });
 		Output::send(STR("sending deathlink: {}"), Utils::s2ws(data.dump()));
 	}
+}
+
+void Client::SendRingLink()
+{
+	using json = nlohmann::json;
+
+	if (!ap || !ringLink) {
+		return;
+	}
+
+	int currentErgo = GameData::GetErgoAmount();
+
+	if (prevErgo == -1)
+	{
+		prevErgo = currentErgo;
+		return;
+	}
+
+	int change = currentErgo - prevErgo;
+
+	if (change == 0)
+		return;
+
+	prevErgo = currentErgo;
+
+	change += partialRings;
+	int rings = change / ringRatio;
+	partialRings = change % ringRatio;
+
+	if (rings == 0)
+		return;
+
+	json data{
+			{"time", ap->get_server_time()},
+			{"amount", rings},
+			{"source", std::stoi(uuid)}
+	};
+
+	ap->Bounce(data, {}, {}, { "RingLink" });
+	Output::send(STR("sending ringlink: {}"), Utils::s2ws(data.dump()));
+}
+
+void Client::ReciveRingLink(const nlohmann::json& data)
+{
+	using json = nlohmann::json;
+
+	if (!ap)
+		return;
+
+	json details = data["data"];
+
+	int source = details["source"];
+	if (source == std::stoi(uuid))
+		return;
+
+	int amount = details["amount"];
+	amount *= ringRatio;
+
+	Output::send(STR("amount: {}"), amount);
+
+	prevErgo = std::max(0, prevErgo + amount);
+	GameData::SetErgoAmount(amount);
 }
 
 void Client::ToggleDeathLink()

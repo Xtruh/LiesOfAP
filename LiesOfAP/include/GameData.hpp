@@ -5,6 +5,8 @@ namespace GameData
 {
 	std::wstring GetSaveName();
 	void SetSaveName(const std::wstring& name);
+	int GetErgoAmount();
+	void SetErgoAmount(int amount);
 	void CheckItemSpots();
 	void CheckEnemySpots();
 	void CheckQuests();
