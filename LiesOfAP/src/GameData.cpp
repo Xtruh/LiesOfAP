@@ -5,6 +5,7 @@
 #include "Unreal/UFunction.hpp"
 #include "Unreal/UScriptStruct.hpp"
 #include "Unreal/Property/FStructProperty.hpp"
+#include "Unreal/FText.hpp"
 
 #include "IDs.hpp"
 #include "Client.hpp"
@@ -119,6 +120,33 @@ RC::Unreal::int32* RetriveErgoAmountPointer()
 	return ergoAmount;
 }
 
+bool GameData::IsLoaded()
+{
+	using namespace RC::Unreal;
+
+	auto loadingHandler = UObjectGlobals::FindFirstOf(STR("LSoundSystem"));
+
+	if (!loadingHandler)
+	{
+		Output::send(STR("Couldn't get SoundSystem Instance!\n"));
+		return false;
+	}
+
+	UFunction* loadingFunction = loadingHandler->GetFunctionByNameInChain(L"GetIsAsncLoadingMapCompleted");
+	if (!loadingFunction)
+	{
+		Output::send(STR("Failed to find function GetIsAsncLoadingMapCompleted\n"));
+		return false;
+	}
+
+	bool load = false;
+
+	loadingHandler->ProcessEvent(loadingFunction, &load);
+
+	return load;
+
+}
+
 std::wstring GameData::GetSaveName()
 {
 	auto saveName = RetriveSaveNamePointer();
@@ -185,8 +213,12 @@ void GameData::SetErgoAmount(int amount)
 	else if (amount < 0)
 	{
 		auto ergoAmount = RetriveErgoAmountPointer();
+		if (!ergoAmount)
+			return;
 
-		int total = std::max(-1, *ergoAmount + amount - 1);
+		int total = *ergoAmount + amount;
+
+		total = std::max(-1, total - 1);
 
 		*ergoAmount = total;
 		int one = 1;
@@ -206,7 +238,10 @@ void GameData::CheckItemSpots()
 		// Output::send<LogLevel::Verbose>(STR("Found {} Item Spots\n"), ItemSpots.size());
 		for (UObject* ItemSpot : ItemSpots)
 		{
-			auto state = *ItemSpot->GetValuePtrByPropertyNameInChain<int32>(STR("PropState"));
+			auto statePtr = ItemSpot->GetValuePtrByPropertyNameInChain<int32>(STR("PropState"));
+			if (!statePtr)
+				return;
+			auto state = *statePtr;
 
 			if (ItemSpot->GetName().starts_with(STR("LDynamicPropItemSpot")))
 				continue;
@@ -244,7 +279,10 @@ void GameData::CheckEnemySpots()
 	{
 		for (UObject* NPCSpot : NPCSpots)
 		{
-			auto dead = *NPCSpot->GetValuePtrByPropertyNameInChain<bool>(STR("IsDeadState"));
+			auto deadPtr = NPCSpot->GetValuePtrByPropertyNameInChain<bool>(STR("IsDeadState"));
+			if (!deadPtr)
+				return;
+			auto dead = *deadPtr;
 
 			if (!dead)
 				continue;
@@ -253,6 +291,21 @@ void GameData::CheckEnemySpots()
 			if (!spotCodename)
 			{
 				Output::send<LogLevel::Error>(STR("No Code name found?\n"));
+			}
+
+			if (spotCodename->ToString().starts_with(L"CH08_Puppet_Tomorrow_Electronic_Named_00"))
+			{
+				std::vector<int> locationIds;
+				auto id = NPCSpot->GetValuePtrByPropertyNameInChain<int>(STR("InstanceId"));
+				if (!id)
+					continue;
+				if (*id == 33) // First Puppet of the Future
+					locationIds = ID::LOCCODENAME_TO_ID[L"CH08_Puppet_Tomorrow_Electronic_Named_00_1"];
+				else // Second POTF
+					locationIds = ID::LOCCODENAME_TO_ID[L"CH08_Puppet_Tomorrow_Electronic_Named_00_2"];
+
+				for (int id : locationIds)
+					Client::SendCheck(id);
 			}
 
 			if (!ID::LOCCODENAME_TO_ID.contains(spotCodename->ToString()))
@@ -306,7 +359,18 @@ bool GameData::CheckDeath()
 {
 	using namespace RC::Unreal;
 	//Get player
-	auto player = UObjectGlobals::FindFirstOf(STR("BP_CH_PC_Pino_C"));
+	std::vector<UObject*> players;
+	UObjectGlobals::FindAllOf(STR("BP_CH_PC_Pino_C"), players);
+	UObject* player = nullptr;
+
+	for (auto p : players)
+	{
+		if (p->GetName().starts_with(STR("BP_CH_PC_Pino_C")))
+		{
+			player = p;
+			break;
+		}
+	}
 
 	if (!player)
 	{
@@ -390,7 +454,18 @@ bool GameData::GiveWeapon(int64_t id)
 	auto blade_codename = ID::ITEMID_TO_CODENAME[id + 200];
 
 	//Get player
-	auto player = UObjectGlobals::FindFirstOf(STR("BP_CH_PC_Pino_C"));
+	std::vector<UObject*> players;
+	UObjectGlobals::FindAllOf(STR("BP_CH_PC_Pino_C"), players);
+	UObject* player = nullptr;
+
+	for (auto p : players)
+	{
+		if (p->GetName().starts_with(STR("BP_CH_PC_Pino_C")))
+		{
+			player = p;
+			break;
+		}
+	}
 
 	if (!player)
 	{
@@ -422,7 +497,24 @@ void GameData::ReceiveDeath()
 	using namespace RC::Unreal;
 
 	//Get player
-	auto player = UObjectGlobals::FindFirstOf(STR("BP_CH_PC_Pino_C"));
+	std::vector<UObject*> players;
+	UObjectGlobals::FindAllOf(STR("BP_CH_PC_Pino_C"), players);
+	UObject* player = nullptr;
+
+	for (auto p : players)
+	{
+		if (p->GetName().starts_with(STR("BP_CH_PC_Pino_C")))
+		{
+			player = p;
+			break;
+		}
+	}
+
+	if (!player)
+	{
+		Output::send(STR("Couldn't get Player Instance!\n"));
+		return;
+	}
 
 	UFunction* receiveDamage = player->GetFunctionByNameInChain(L"ReceiveDamage");
 	if (!receiveDamage)
@@ -459,4 +551,43 @@ void GameData::ReceiveDeath()
 	}receiveDamageParams{ {0,5000,0,FName(),0,TMap<uint8,float>(),TMap<uint8,float>(),0,0,0,0},{0,FName(),false,0} };
 
 	player->ProcessEvent(receiveDamage, &receiveDamageParams);
+}
+
+void GameData::PrintToConsole(const std::wstring& markdown_text, const std::wstring& plain_text)
+{
+	using namespace RC::Unreal;
+
+	std::vector<UObject*> consoles;
+	UObjectGlobals::FindAllOf(STR("AP_Console_C"), consoles);
+	UObject* apConsole = nullptr;
+
+	for (auto c : consoles)
+	{
+		if (c->GetName().starts_with(STR("AP_Console_C_")))
+		{
+			apConsole = c;
+			break;
+		}
+	}
+
+	if (!apConsole)
+	{
+		Output::send(STR("Couldn't get AP Console Instance!\n"));
+		return;
+	}
+
+	UFunction* addMessageFunction = apConsole->GetFunctionByNameInChain(L"AP_PrintToConsole");
+	if (!addMessageFunction)
+	{
+		Output::send(STR("Failed to find function AP_PrintToConsole\n"));
+		return;
+	}
+
+	struct MessageParams
+	{
+		FText markdown;
+		FText plain;
+	}messageParams{ FText(markdown_text), FText(plain_text) };
+
+	apConsole->ProcessEvent(addMessageFunction, &messageParams);
 }

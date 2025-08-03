@@ -2,25 +2,23 @@
 #include "Unreal/UObjectGlobals.hpp"
 #include "Unreal/AActor.hpp"
 #include "Unreal/Hooks.hpp"
+#include "Unreal/FText.hpp"
 
 #include "Client.hpp"
 #include "GameData.hpp"
+#include "IDs.hpp"
+#include "StringOps.hpp"
+#include "UnrealConsole.hpp"
 
 static void EmptyFunction(RC::Unreal::UnrealScriptFunctionCallableContext& context, void* customdata) {
 	// Empty function to provide to RegisterHook.
 }
 
-std::string ws2s(const std::wstring& wstr)
-{
-	using convert_typeX = std::codecvt_utf8<wchar_t>;
-	std::wstring_convert<convert_typeX, wchar_t> converterX;
-
-	return converterX.to_bytes(wstr);
-}
-
 class LiesOfAP : public RC::CppUserModBase
 {
 public:
+
+	bool sendmessage_hooked = false;
 
 	LiesOfAP() : CppUserModBase()
 	{
@@ -36,7 +34,6 @@ public:
 
 	~LiesOfAP() override
 	{
-		Client::Disconnect();
 	}
 
 	auto on_update() -> void override
@@ -49,12 +46,12 @@ public:
 			GameData::CheckItemSpots();
 			GameData::CheckEnemySpots();
 			GameData::CheckQuests();
-			Client::SendDeath(GameData::CheckDeath());
-			Client::SendRingLink();
+			if (GameData::IsLoaded())
+			{
+				Client::SendDeath(GameData::CheckDeath());
+				Client::SendRingLink();
+			}
 		}
-
-		//int ergo = GameData::GetErgoAmount();
-		//Output::send<LogLevel::Verbose>(STR("Ergo: {}\n"), ergo);
 	}
 
 	auto on_unreal_init() -> void override
@@ -62,7 +59,39 @@ public:
 		using namespace RC::Unreal;
 		Output::send<LogLevel::Verbose>(STR("Lies Of AP Init\n"));
 
+		ID::Init();
+
 		// Client::Connect("localhost:38281", "Player1", "");
+
+		Hook::RegisterStaticConstructObjectPostCallback([&](const FStaticConstructObjectParameters& params, UObject* object) -> UObject*
+			{
+				auto sendmessage = [&](UnrealScriptFunctionCallableContext& context, void* customdata)
+					{
+						FText input = context.GetParams<FText>();
+						Output::send<LogLevel::Verbose>(input.ToString());
+						UnrealConsole::ProcessInput(input);
+					};
+
+				if (object->GetName().starts_with(STR("AP_Console_C_")))
+				{
+					Output::send<LogLevel::Verbose>(object->GetName());
+
+					if (!sendmessage_hooked)
+					{
+						UFunction* send_function = object->GetFunctionByName(STR("AP_SendMessage"));
+						if (!send_function)
+						{
+							Output::send<LogLevel::Error>(STR("Could not find function \"AP_SendMessage\""));
+							return object;
+						}
+
+						Unreal::UObjectGlobals::RegisterHook(send_function, sendmessage, EmptyFunction, nullptr);
+						sendmessage_hooked = true;
+					}
+				}
+
+				return object;
+			});
 
 		Hook::RegisterProcessConsoleExecCallback([&](UObject* object, const TCHAR* command, FOutputDevice& Ar, UObject* executor) -> bool
 			{
@@ -101,11 +130,11 @@ public:
 
 					if (tokens.size() > 3)
 					{
-						Client::Connect(ws2s(tokens[1]), ws2s(tokens[2]), ws2s(tokens[3]));
+						Client::Connect(StringOps::ws2s(tokens[1]), StringOps::ws2s(tokens[2]), StringOps::ws2s(tokens[3]));
 					}
 					else
 					{
-						Client::Connect(ws2s(tokens[1]), ws2s(tokens[2]), "");
+						Client::Connect(StringOps::ws2s(tokens[1]), StringOps::ws2s(tokens[2]), "");
 					}
 				}
 				else if (tokens[0] == STR("/deathlink"))

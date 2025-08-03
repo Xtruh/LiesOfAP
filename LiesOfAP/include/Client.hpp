@@ -4,7 +4,8 @@
 
 #include "nlohmann/json.hpp"
 
-namespace Client {
+namespace Client 
+{
 	void Connect(const std::string uri, const std::string slotname, const std::string password);
 	bool Connected();
 	void SendCheck(int64_t id);
@@ -13,6 +14,7 @@ namespace Client {
 	void SendRingLink();
 	void ReciveRingLink(const nlohmann::json& data);
 	void ToggleDeathLink();
+	void Say(const std::string message);
 	void PollServer();
 	void Disconnect();
 }

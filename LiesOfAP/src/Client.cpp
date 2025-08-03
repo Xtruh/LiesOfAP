@@ -3,6 +3,7 @@
 #define ASIO_STANDALONE
 
 #include <format>
+#include <ctime>
 
 #include "Mod/CppUserModBase.hpp"
 
@@ -12,9 +13,11 @@
 #include "apuuid.hpp"
 
 #include "GameData.hpp"
+#include "StringOps.hpp"
 
 APClient* ap = nullptr;
 std::string uuid(ap_get_uuid(""));
+int source = static_cast<int>(std::time(nullptr));
 const std::string game_name("Lies Of P");
 const std::string cert_store("ue4ss/Mods/LiesOfAP/dlls/cacert.pem");
 bool dc = false;
@@ -23,32 +26,13 @@ bool deathLink = false;
 bool ringLink = false;
 bool hardRingLink = false;
 bool isDead = false;
-int ringRatio = 100;
+int ringRatio = 10;
 int prevErgo = -1;
 int partialRings = 0;
-int goal_id = 347;
+int goal_id = 740;
 std::set<int64_t> sent_ids;
 std::set<int64_t> toResend;
 
-namespace Utils
-{
-
-	std::wstring s2ws(const std::string& str)
-	{
-		using convert_typeX = std::codecvt_utf8<wchar_t>;
-		std::wstring_convert<convert_typeX, wchar_t> converterX;
-
-		return converterX.from_bytes(str);
-	}
-
-	std::string ws2s(const std::wstring& wstr)
-	{
-		using convert_typeX = std::codecvt_utf8<wchar_t>;
-		std::wstring_convert<convert_typeX, wchar_t> converterX;
-
-		return converterX.to_bytes(wstr);
-	}
-}
 
 std::wstring EncodeSaveName()
 {
@@ -58,7 +42,7 @@ std::wstring EncodeSaveName()
 	if (!ap)
 		return L"";
 
-	stream << Utils::s2ws(ap->get_seed()) << L',' << ap->get_player_number() << L',' << lastReceivedIndex;
+	stream << StringOps::s2ws(ap->get_seed()) << L',' << ap->get_player_number() << L',' << lastReceivedIndex;
 
 	return stream.str();
 }
@@ -75,6 +59,49 @@ std::vector<std::wstring> SplitSaveName(const std::wstring& saveName)
 	}
 
 	return result;
+}
+
+std::string ProcessMessageText(const APClient::PrintJSONArgs& args)
+{
+	std::string console_text;
+
+	// This loop is basically the logic of APClient::render_json(), adapted to use RichTextBlock markdown.
+	for (const auto& node : args.data)
+	{
+		if (node.type == "player_id")
+		{
+			int id = std::stoi(node.text);
+			std::string player_name = ap->get_player_alias(id);
+			if (id == ap->get_player_number())
+				console_text += "<Self>" + player_name + "</>";
+			else
+				console_text += "<Player>" + player_name + "</>";
+		}
+		else if (node.type == "item_id")
+		{
+			int64_t id = std::stoll(node.text);
+			std::string item_name = ap->get_item_name(id, ap->get_player_game(node.player));
+			if (node.flags & APClient::FLAG_ADVANCEMENT)
+				console_text += "<Progression";
+			else if (node.flags & APClient::FLAG_NEVER_EXCLUDE)
+				console_text += "<Useful";
+			else if (node.flags & APClient::FLAG_TRAP)
+				console_text += "<Trap";
+			else
+				console_text += "<Filler";
+			console_text += "Item>" + item_name + "</>";
+		}
+		else if (node.type == "location_id")
+		{
+			int64_t id = std::stoll(node.text);
+			std::string location_name = ap->get_location_name(id, ap->get_player_game(node.player));
+			console_text += "<Location>" + location_name + "</>";
+		}
+		else
+			console_text += node.text;
+	}
+
+	return console_text;
 }
 
 void Client::Connect(const std::string uri, const std::string slotname, const std::string password)
@@ -105,7 +132,7 @@ void Client::Connect(const std::string uri, const std::string slotname, const st
 			auto saveData = SplitSaveName(GameData::GetSaveName());
 			if (saveData.size() == 3)
 			{
-				if ((Utils::ws2s(saveData[0]) != ap->get_seed()) || std::stoi(saveData[1]) != ap->get_player_number())
+				if ((StringOps::ws2s(saveData[0]) != ap->get_seed()) || std::stoi(saveData[1]) != ap->get_player_number())
 				{
 					Output::send(STR("Slot mismatch load correct save"));
 					return;
@@ -119,7 +146,7 @@ void Client::Connect(const std::string uri, const std::string slotname, const st
 			Output::send(STR("index: {}"), lastReceivedIndex);
 			GameData::SetSaveName(EncodeSaveName());
 
-			Output::send(STR("{}"), Utils::s2ws(slot_data.dump()));
+			Output::send(STR("{}"), StringOps::s2ws(slot_data.dump()));
 
 			std::list<std::string> tags{};
 
@@ -171,9 +198,19 @@ void Client::Connect(const std::string uri, const std::string slotname, const st
 			if (indexChanged)
 				GameData::SetSaveName(EncodeSaveName());
 		});
+	ap->set_print_json_handler([](const APClient::PrintJSONArgs& args)
+		{
+			std::string plain_text = ap->render_json(args.data);
+			std::string markdown_text = ProcessMessageText(args);
+
+			Output::send(STR("p: {}\n"), StringOps::s2ws(plain_text));
+			Output::send(STR("m: {}\n"), StringOps::s2ws(markdown_text));
+
+			GameData::PrintToConsole(StringOps::s2ws(markdown_text), StringOps::s2ws(plain_text));
+		});
 	ap->set_bounced_handler([](const json& data)
 		{
-			Output::send(STR("receiving bounce: {}"), Utils::s2ws(data.dump()));
+			Output::send(STR("receiving bounce: {}"), StringOps::s2ws(data.dump()));
 
 			auto tags = data.find("tags"); // This will either be data.end() or an array of tags.
 			if (tags == data.end())
@@ -185,7 +222,7 @@ void Client::Connect(const std::string uri, const std::string slotname, const st
 			bool is_ringLink = std::find(tags->begin(), tags->end(), "RingLink") != tags->end();
 			bool is_hardRingLink = std::find(tags->begin(), tags->end(), "HardRingLink") != tags->end();
 
-			if (is_deathlink)
+			if (is_deathlink && GameData::IsLoaded())
 			{
 				isDead = true;
 				GameData::ReceiveDeath();
@@ -258,7 +295,7 @@ void Client::SendDeath(bool dead)
 		};
 
 		ap->Bounce(data, {}, {}, { "DeathLink" });
-		Output::send(STR("sending deathlink: {}"), Utils::s2ws(data.dump()));
+		Output::send(STR("sending deathlink: {}"), StringOps::s2ws(data.dump()));
 	}
 }
 
@@ -271,6 +308,9 @@ void Client::SendRingLink()
 	}
 
 	int currentErgo = GameData::GetErgoAmount();
+
+	if (currentErgo == -1)
+		return;
 
 	if (prevErgo == -1)
 	{
@@ -295,24 +335,24 @@ void Client::SendRingLink()
 	json data{
 			{"time", ap->get_server_time()},
 			{"amount", rings},
-			{"source", std::stoi(uuid)}
+			{"source", source}
 	};
 
+	Output::send(STR("sending ringlink: {}"), StringOps::s2ws(data.dump()));
 	ap->Bounce(data, {}, {}, { "RingLink" });
-	Output::send(STR("sending ringlink: {}"), Utils::s2ws(data.dump()));
 }
 
 void Client::ReciveRingLink(const nlohmann::json& data)
 {
 	using json = nlohmann::json;
 
-	if (!ap)
+	if (!ap || !GameData::IsLoaded())
 		return;
 
 	json details = data["data"];
 
-	int source = details["source"];
-	if (source == std::stoi(uuid))
+	int packetSource = details["source"];
+	if (packetSource == source)
 		return;
 
 	int amount = details["amount"];
@@ -335,15 +375,30 @@ void Client::ToggleDeathLink()
 
 	if (deathLink)
 		tags.push_back("DeathLink");
+	if (ringLink)
+		tags.push_back("RingLink");
+	if (hardRingLink)
+		tags.push_back("HardRingLink");
 
 	ap->ConnectUpdate(false, 0, true, tags);
 }
 
-void Client::PollServer()
+void Client::Say(const std::string message)
 {
-	if (!ap) {
+	if (!ap)
+	{
 		return;
 	}
+	ap->Say(message);
+}
+
+void Client::PollServer()
+{
+	if (!ap)
+	{
+		return;
+	}
+
 	ap->poll();
 }
 
