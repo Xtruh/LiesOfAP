@@ -1,7 +1,7 @@
 # LiesOfAP
 This is a mod for Lies of P that works with the [multi game randomizer Achipelago](https://archipelago.gg) it is currently being activly developed. All keys, weapons, puppet parts, amulets, ergo items, and materials are randomized with consumables and throwables as filler.
 
-You can get the latest relese from [the releses page](https://github.com/Xtruh/LiesOfAP/releases)
+You can get the latest release from [the releases page](https://github.com/Xtruh/LiesOfAP/releases)
 
 # Changes From Base Game
 - The Azure Dragon Glaive and other Wukong collab items are not given to you at the start but are in the item pool
