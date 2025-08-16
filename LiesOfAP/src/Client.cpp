@@ -20,6 +20,7 @@ std::string uuid(ap_get_uuid(""));
 int source = static_cast<int>(std::time(nullptr));
 const std::string game_name("Lies Of P");
 const std::string cert_store("ue4ss/Mods/LiesOfAP/dlls/cacert.pem");
+bool init = false;
 bool dc = false;
 int lastReceivedIndex = -1;
 bool deathLink = false;
@@ -29,7 +30,8 @@ bool isDead = false;
 int ringRatio = 10;
 int prevErgo = -1;
 int partialRings = 0;
-int goal_id = 740;
+int toAdd = 0;
+int goal_id = 740; // Simon Manus Goal
 std::set<int64_t> sent_ids;
 std::set<int64_t> toResend;
 
@@ -112,18 +114,22 @@ void Client::Connect(const std::string uri, const std::string slotname, const st
 		delete ap;
 	}
 	lastReceivedIndex = -1;
+	init = false;
 	dc = true;
 	deathLink = false;
 	ringLink = false;
 	hardRingLink = false;
+	ringRatio = 10;
 	prevErgo = -1;
 	partialRings = 0;
+	toAdd = 0;
+	goal_id = 740; // Simon Manus Goal
 
 	ap = new APClient(uuid, game_name, uri, cert_store);
 	ap->set_room_info_handler([slotname, password]()
 		{
 			int items_handling = 0b111;
-			APClient::Version version{ 0, 6, 2 };
+			APClient::Version version{ 0, 6, 3 };
 
 			ap->ConnectSlot(slotname, password, items_handling, {}, version);
 		});
@@ -135,6 +141,7 @@ void Client::Connect(const std::string uri, const std::string slotname, const st
 				if ((StringOps::ws2s(saveData[0]) != ap->get_seed()) || std::stoi(saveData[1]) != ap->get_player_number())
 				{
 					Output::send(STR("Slot mismatch load correct save"));
+					init = true;
 					return;
 				}
 
@@ -142,6 +149,7 @@ void Client::Connect(const std::string uri, const std::string slotname, const st
 			}
 
 			dc = false;
+			init = true;
 
 			Output::send(STR("index: {}"), lastReceivedIndex);
 			GameData::SetSaveName(EncodeSaveName());
@@ -166,6 +174,21 @@ void Client::Connect(const std::string uri, const std::string slotname, const st
 					{
 						tags.push_back("HardRingLink");
 						hardRingLink = true;
+					}
+				}
+				else if (key == "ring_link_ratio")
+				{
+					ringRatio = value;
+				}
+				else if (key == "goal")
+				{
+					if (value == 0) // King of Puppets Goal
+					{
+						goal_id = 346;
+					}
+					else if (value == 2)
+					{
+						goal_id = 742; // Nameless Puppet
 					}
 				}
 			}
@@ -225,9 +248,11 @@ void Client::Connect(const std::string uri, const std::string slotname, const st
 			if (is_deathlink && GameData::IsLoaded())
 			{
 				isDead = true;
+				std::wstring source = StringOps::s2ws(data["data"]["cause"]);
+				GameData::PrintToConsole(source, source);
 				GameData::ReceiveDeath();
 			}
-			else if (is_ringLink || is_hardRingLink)
+			else if ((is_ringLink || is_hardRingLink) && GameData::IsLoaded())
 			{
 				Client::ReciveRingLink(data);
 			}
@@ -346,7 +371,7 @@ void Client::ReciveRingLink(const nlohmann::json& data)
 {
 	using json = nlohmann::json;
 
-	if (!ap || !GameData::IsLoaded())
+	if (!ap)
 		return;
 
 	json details = data["data"];
@@ -358,10 +383,9 @@ void Client::ReciveRingLink(const nlohmann::json& data)
 	int amount = details["amount"];
 	amount *= ringRatio;
 
-	Output::send(STR("amount: {}"), amount);
+	toAdd += amount;
 
-	prevErgo = std::max(0, prevErgo + amount);
-	GameData::SetErgoAmount(amount);
+	Output::send(STR("amount: {}\n total: {}"), amount, toAdd);
 }
 
 void Client::ToggleDeathLink()
@@ -370,17 +394,70 @@ void Client::ToggleDeathLink()
 		return;
 	}
 
-	std::list<std::string> tags{};
 	deathLink = !deathLink;
 
+	UpdateTags();
+}
+
+void Client::ToggleRingLink()
+{
+	if (!ap) {
+		return;
+	}
+
+	ringLink = !ringLink;
+
+	UpdateTags();
+}
+
+void Client::ToggleHardRingLink()
+{
+	if (!ap) {
+		return;
+	}
+
+	hardRingLink = !hardRingLink;
+
+	UpdateTags();
+}
+
+void Client::SetRingRatio(int ratio)
+{
+	if (!ap) {
+		return;
+	}
+
+	ringRatio = ratio;
+	partialRings = 0;
+	toAdd = 0;
+
+	auto plain = std::format(L"Ring Link ratio set to {}", ringRatio);
+	auto markdown = std::format(L"<System>{}</>", plain);
+
+	GameData::PrintToConsole(markdown, plain);
+}
+
+void Client::UpdateTags()
+{
+	std::list<std::string> tags{};
 	if (deathLink)
 		tags.push_back("DeathLink");
 	if (ringLink)
+	{
 		tags.push_back("RingLink");
-	if (hardRingLink)
-		tags.push_back("HardRingLink");
+		if (hardRingLink)
+			tags.push_back("HardRingLink");
+	}
 
 	ap->ConnectUpdate(false, 0, true, tags);
+}
+
+void Client::EchoRatio()
+{
+	auto plain = std::format(L"The current Ring Link Ratio is {}", ringRatio);
+	auto markdown = std::format(L"<System>{}</>", plain);
+
+	GameData::PrintToConsole(markdown, plain);
 }
 
 void Client::Say(const std::string message)
@@ -394,18 +471,32 @@ void Client::Say(const std::string message)
 
 void Client::PollServer()
 {
+	if (init && dc)
+		Disconnect();
+
 	if (!ap)
 	{
 		return;
 	}
 
 	ap->poll();
+
+	if (toAdd != 0 && GameData::IsLoaded())
+	{
+		prevErgo = std::max(0, prevErgo + toAdd);
+		GameData::SetErgoAmount(toAdd);
+		toAdd = 0;
+	}
+
 }
 
 void Client::Disconnect()
 {
+	Output::send(STR("Disconecting"));
+
 	if (!ap) {
 		return;
 	}
 	delete ap;
+	ap = nullptr;
 }

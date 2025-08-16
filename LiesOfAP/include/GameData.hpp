@@ -1,11 +1,15 @@
 #pragma once
 
 #include <string>
+
+#include "Unreal/UObject.hpp"
 namespace GameData
 {
 	bool IsLoaded();
+	std::wstring GetCurrentMap(RC::Unreal::UObject* object);
 	std::wstring GetSaveName();
 	void SetSaveName(const std::wstring& name);
+	void SaveGame();
 	int GetErgoAmount();
 	void SetErgoAmount(int amount);
 	void CheckItemSpots();

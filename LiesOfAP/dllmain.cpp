@@ -74,8 +74,6 @@ public:
 
 				if (object->GetName().starts_with(STR("AP_Console_C_")))
 				{
-					Output::send<LogLevel::Verbose>(object->GetName());
-
 					if (!sendmessage_hooked)
 					{
 						UFunction* send_function = object->GetFunctionByName(STR("AP_SendMessage"));
@@ -91,6 +89,25 @@ public:
 				}
 
 				return object;
+			});
+
+		Hook::RegisterBeginPlayPostCallback([&](AActor* actor)
+			{
+				if (actor->GetName().starts_with(STR("LPCController")))
+				{
+
+					auto current_map = GameData::GetCurrentMap(actor);
+
+					Output::send<LogLevel::Verbose>(STR("MAP: {}"), current_map);
+
+					static std::array<std::wstring, 3> map_names = { L"PSO_P", L"Init_P", L"Title_P" };
+
+					if (std::find(map_names.begin(), map_names.end(), current_map) != map_names.end())
+					{
+						Client::Disconnect();
+					}
+				}
+
 			});
 
 		Hook::RegisterProcessConsoleExecCallback([&](UObject* object, const TCHAR* command, FOutputDevice& Ar, UObject* executor) -> bool

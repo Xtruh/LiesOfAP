@@ -6,6 +6,8 @@
 #include "Unreal/UScriptStruct.hpp"
 #include "Unreal/Property/FStructProperty.hpp"
 #include "Unreal/FText.hpp"
+#include "Unreal/World.hpp"
+#include "Unreal/UClass.hpp"
 
 #include "IDs.hpp"
 #include "Client.hpp"
@@ -147,6 +149,12 @@ bool GameData::IsLoaded()
 
 }
 
+std::wstring GameData::GetCurrentMap(RC::Unreal::UObject* object)
+{
+	std::wstring current_map = object->GetWorld()->GetName();
+	return current_map;
+}
+
 std::wstring GameData::GetSaveName()
 {
 	auto saveName = RetriveSaveNamePointer();
@@ -165,6 +173,34 @@ void GameData::SetSaveName(const std::wstring& name)
 		return;
 
 	*saveName = FString(name.c_str());
+}
+
+void GameData::SaveGame()
+{
+	using namespace RC::Unreal;
+	//Get GameDataSystem
+	auto dataSystem = UObjectGlobals::FindFirstOf(STR("LGameDataSystem"));
+
+	if (!dataSystem)
+	{
+		Output::send(STR("Couldn't get GameDataSystem Instance!\n"));
+		return;
+	}
+
+	UFunction* saveGame = dataSystem->GetFunctionByNameInChain(L"SaveGameDataFromUI");
+	if (!saveGame)
+	{
+		Output::send(STR("Failed to find function SaveGameDataFromUI\n"));
+		return;
+	}
+
+	struct SaveGameParams
+	{
+		bool async;
+		bool normal;
+	}saveGameParams{ true, true };
+
+	dataSystem->ProcessEvent(saveGame, &saveGameParams);
 }
 
 int GameData::GetErgoAmount()
@@ -199,16 +235,31 @@ void GameData::SetErgoAmount(int amount)
 		return;
 	}
 
-	UFunction* gainErgo = player->GetFunctionByNameInChain(L"OnGainExp");
-	if (!gainErgo)
+	UFunction* gainErgo = nullptr; // = player->GetFunctionByNameInChain(L"OnGainExp");
+
+	std::vector<UFunction*> functions;
+
+	for (UFunction* Function : player->GetClassPrivate()->ForEachFunctionInChain())
+	{
+		if (Function->GetNamePrivate() == FName(L"OnGainExp"))
+		{
+			Output::send(L"OnGainExp");
+			functions.push_back(Function);
+		}
+	}
+
+	if (functions.size() == 0)
 	{
 		Output::send(STR("Failed to find function OnGainExp\n"));
 		return;
 	}
 
+	gainErgo = functions[1];
+
 	if (amount > 0)
 	{
-		player->ProcessEvent(gainErgo, &amount);
+		Unreal::int32 inExp = amount;
+		player->ProcessEvent(gainErgo, &inExp);
 	}
 	else if (amount < 0)
 	{
@@ -221,7 +272,7 @@ void GameData::SetErgoAmount(int amount)
 		total = std::max(-1, total - 1);
 
 		*ergoAmount = total;
-		int one = 1;
+		Unreal::int32 one = 1;
 		player->ProcessEvent(gainErgo, &one);
 	}
 }
@@ -559,35 +610,27 @@ void GameData::PrintToConsole(const std::wstring& markdown_text, const std::wstr
 
 	std::vector<UObject*> consoles;
 	UObjectGlobals::FindAllOf(STR("AP_Console_C"), consoles);
-	UObject* apConsole = nullptr;
 
 	for (auto c : consoles)
 	{
-		if (c->GetName().starts_with(STR("AP_Console_C_")))
+		if (!c->GetName().starts_with(STR("AP_Console_C_")))
 		{
-			apConsole = c;
-			break;
+			continue;
 		}
+
+		UFunction* addMessageFunction = c->GetFunctionByNameInChain(L"AP_PrintToConsole");
+		if (!addMessageFunction)
+		{
+			Output::send(STR("Failed to find function AP_PrintToConsole\n"));
+			return;
+		}
+
+		struct MessageParams
+		{
+			FText markdown;
+			FText plain;
+		}messageParams{ FText(markdown_text), FText(plain_text) };
+
+		c->ProcessEvent(addMessageFunction, &messageParams);
 	}
-
-	if (!apConsole)
-	{
-		Output::send(STR("Couldn't get AP Console Instance!\n"));
-		return;
-	}
-
-	UFunction* addMessageFunction = apConsole->GetFunctionByNameInChain(L"AP_PrintToConsole");
-	if (!addMessageFunction)
-	{
-		Output::send(STR("Failed to find function AP_PrintToConsole\n"));
-		return;
-	}
-
-	struct MessageParams
-	{
-		FText markdown;
-		FText plain;
-	}messageParams{ FText(markdown_text), FText(plain_text) };
-
-	apConsole->ProcessEvent(addMessageFunction, &messageParams);
 }

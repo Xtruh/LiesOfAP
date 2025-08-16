@@ -14,6 +14,11 @@ namespace Client
 	void SendRingLink();
 	void ReciveRingLink(const nlohmann::json& data);
 	void ToggleDeathLink();
+	void ToggleRingLink();
+	void ToggleHardRingLink();
+	void SetRingRatio(int ratio);
+	void UpdateTags();
+	void EchoRatio();
 	void Say(const std::string message);
 	void PollServer();
 	void Disconnect();
