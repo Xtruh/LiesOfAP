@@ -25,7 +25,7 @@ You can get the latest relese from [the releses page](https://github.com/Xtruh/L
 
 # Mod Installation
 1. Go to the Releases page and download the latest version of LiesOfAP.zip
-2. Locate your lies of P install if on steam should look somthing like (/Steam/Steamapps/Common/Lies of P)
+2. Locate your lies of P install if on steam should look something like (/Steam/Steamapps/Common/Lies of P)
 3. Extract the contents of LiesOfAP.zip directly into Steam/Steamapps/Common/Lies of P
 
 # Generating a Game
@@ -45,6 +45,6 @@ You can get the latest relese from [the releses page](https://github.com/Xtruh/L
 
 - **Alternatively** you can create copy of the game before installing the mod (not recommended due to the size of the game)
 
-  1. In Steam\steamapps\common, make a copy of your LiesofP folder and rename it "LiesofP_AP" (or somthing similar).
+  1. In Steam\steamapps\common, make a copy of your LiesofP folder and rename it "LiesofP_AP" (or something similar).
   2. You can add the new LiesofP.exe as a "Non-Steam Game" in Steam to access it easily from Steam and to maintain Steam Input compatibility (which may be required for some controllers)
   3. Extract the contents of LiesOfAP.zip directly into Steam\Steamapps\Common\LiesofP_AP (or whatever you named it)
