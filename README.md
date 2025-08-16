@@ -25,7 +25,7 @@ You can get the latest relese from [the releses page](https://github.com/Xtruh/L
 
 # Mod Installation
 1. Go to the Releases page and download the latest version of LiesOfAP.zip
-2. Locate rour lies of P install if on steam should look somthing like (/Steam/Steamapps/Common/Lies of P)
+2. Locate your lies of P install if on steam should look somthing like (/Steam/Steamapps/Common/Lies of P)
 3. Extract the contents of LiesOfAP.zip directly into Steam/Steamapps/Common/Lies of P
 
 # Generating a Game
