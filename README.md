@@ -24,15 +24,16 @@ You can get the latest release from [the releases page](https://github.com/Xtruh
   ratio to `new_ratio` Min: 1 Max: 100
 
 # Mod Installation
-1. Go to the Releases page and download the latest version of LiesOfAP.zip
+1. Go to the [Releases page](https://github.com/Xtruh/LiesOfAP/releases) and download the latest version of LiesOfAP.zip
 2. Locate your lies of P install if on steam should look something like (/Steam/Steamapps/Common/Lies of P)
 3. Extract the contents of LiesOfAP.zip directly into Steam/Steamapps/Common/Lies of P
 
 # Generating a Game
-1. Place liesofp.apworld into Archipelago/lib/worlds.
-2. Place all yamls for the seed into Archipelago/Players.
-3. Run ArchipelagoGenerate.exe.
-4. A zip file will be added to Archipelago/output, which can [hosted on the website](https://archipelago.gg/uploads) or hosted locally with ArchipelagoServer.exe.
+5. Go to the [Releases page](https://github.com/Xtruh/LiesOfAP/releases) and dowload the latest liesofp.apworld
+2. Place liesofp.apworld into Archipelago/custom_worlds.
+3. Place all yamls for the seed into Archipelago/Players.
+4. Run ArchipelagoGenerate.exe.
+5. A zip file will be added to Archipelago/output, which can [hosted on the website](https://archipelago.gg/uploads) or hosted locally with ArchipelagoServer.exe.
 
 # Joining a MultiWorld Game
 1. Launch Lies of P and create a new save file.
