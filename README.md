@@ -4,7 +4,7 @@ This is a mod for Lies of P that works with the [multi game randomizer Achipelag
 You can get the latest release from [the releases page](https://github.com/Xtruh/LiesOfAP/releases)
 
 # Changes From Base Game
-- The Azure Dragon Glaive and other Wukong collab items are not given to you at the start but are in the item pool
+- The Azure Dragon Glaive and other Wu-long collab items are not given to you at the start but are in the item pool
 - Phase 7 in the P Organ upgrade is available on new game with a yaml option to add more quartz to the item pool
 - Chapter 1 and the original Hotel Krat are available after they normally become unacceptable
 
