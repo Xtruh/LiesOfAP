@@ -24,9 +24,14 @@ You can get the latest release from [the releases page](https://github.com/Xtruh
   ratio to `new_ratio` Min: 1 Max: 100
 
 # Mod Installation
-1. Go to the [Releases page](https://github.com/Xtruh/LiesOfAP/releases) and download the latest version of LiesOfAP.zip
+1. Go to the [Releases page](https://github.com/Xtruh/LiesOfAP/releases) and download the latest version of LiesOfP.zip
 2. Locate your lies of P install if on steam should look something like (/Steam/Steamapps/Common/Lies of P)
 3. Extract the contents of LiesOfAP.zip directly into Steam/Steamapps/Common/Lies of P
+
+# Updating Guide
+1. Go to the latest release and install main.dll and liesofp.apworld
+2. put the new apworld inside your archipelago/custom_worlds folder
+3. put the new main.dll inside Lies of P\LiesofP\Binaries\Win64\ue4ss\Mods\LiesOfAP\dlls
 
 # Generating a Game
 5. Go to the [Releases page](https://github.com/Xtruh/LiesOfAP/releases) and dowload the latest liesofp.apworld
