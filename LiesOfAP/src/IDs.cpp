@@ -183,6 +183,7 @@ namespace ID
 			{431, L"Head_Glassess_RudolfNose"},
 			{432, L"HatCostume_Alidoro"},
 			{433, L"HatCostume_ReindeerHorn"},
+			{434, L"Costume_Alidoro"},
 		};
 
 		std::map<int, std::wstring> Gestures =

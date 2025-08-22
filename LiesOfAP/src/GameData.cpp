@@ -634,3 +634,10 @@ void GameData::PrintToConsole(const std::wstring& markdown_text, const std::wstr
 		c->ProcessEvent(addMessageFunction, &messageParams);
 	}
 }
+
+void GameData::PrintToConsole(const std::wstring& text)
+{
+	auto markdown = std::format(L"<System>{}</>", text);
+
+	PrintToConsole(markdown, text);
+}

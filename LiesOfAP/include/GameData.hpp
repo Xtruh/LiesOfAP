@@ -21,4 +21,5 @@ namespace GameData
 	bool GiveWeapon(int64_t id);
 	void ReceiveDeath();
 	void PrintToConsole(const std::wstring& markdown_text, const std::wstring& plain_text);
+	void PrintToConsole(const std::wstring& text);
 }

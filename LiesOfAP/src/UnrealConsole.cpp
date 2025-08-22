@@ -9,6 +9,28 @@
 
 namespace UnrealConsole
 {
+	const wchar_t DELIM = L' ';
+
+	std::wstring GetNextToken(std::wstring& input)
+	{
+		// Gets the next space-separated word and removes it from the input string.
+		while (input[0] == DELIM)
+			input.erase(input.begin());
+
+		std::wstring token;
+		if (input[0] == L'"')
+		{
+			// look for second double quote and take everything between them as one token
+			token = input.substr(1, input.find(L'"', 1) - 1);
+			input.erase(0, input.find(L'"', 1) + 1);
+			return token;
+		}
+		token = input.substr(0, input.find(DELIM));
+		input.erase(0, input.find(DELIM));
+		return token;
+
+	}
+
 	void ProcessInput(RC::Unreal::FText input)
 	{
 		std::wstring command = input.ToString();
@@ -36,57 +58,42 @@ namespace UnrealConsole
 
 	void ProcessCommand(std::wstring command)
 	{
-		//this takes user input and splits it up by spaces
-		std::wstring input(command);
-		std::wstringstream stream(input);
-		std::wstring segment;
-		std::vector<std::wstring> tokens;
+		auto commandText = GetNextToken(command);
 
-		while (stream >> segment)
-		{
-			tokens.push_back(segment);
-		}
+		RC::Output::send<RC::LogLevel::Verbose>(commandText);
 
-		if (tokens.empty())
+		if (commandText == STR("connect"))
 		{
-			return;
-		}
-
-		for (auto& token : tokens)
-		{
-			RC::Output::send<RC::LogLevel::Verbose>(token);
-		}
-
-		if (tokens[0] == STR("connect"))
-		{
-			if (tokens.size() > 4 || tokens.size() <= 2)
+			auto ip = GetNextToken(command);
+			if (ip.empty())
 			{
+				GameData::PrintToConsole(L"Please provide an ip address, slot name, and (if necessary) password.");
 				return;
 			}
 
-			if (tokens.size() > 3)
+			auto slotname = GetNextToken(command);
+			if (slotname.empty())
 			{
-				Client::Connect(StringOps::ws2s(tokens[1]), StringOps::ws2s(tokens[2]), StringOps::ws2s(tokens[3]));
-			}
-			else
-			{
-				Client::Connect(StringOps::ws2s(tokens[1]), StringOps::ws2s(tokens[2]), "");
-			}
-		}
-		else if (tokens[0] == STR("ratio"))
-		{
-			if (tokens.size() > 2)
-			{
+				GameData::PrintToConsole(L"Please provide an ip address, slot name, and (if necessary) password.");
 				return;
 			}
-			else if (tokens.size() == 1)
+
+			auto password = GetNextToken(command);
+			Client::Connect(StringOps::ws2s(ip), StringOps::ws2s(slotname), StringOps::ws2s(password));
+		}
+		else if (commandText == STR("ratio"))
+		{
+			auto ratioText = GetNextToken(command);
+
+			if (ratioText.empty())
 			{
 				Client::EchoRatio();
+				return;
 			}
 
 			try
 			{
-				int ratio = std::stoi(tokens[1]);
+				int ratio = std::stoi(ratioText);
 				ratio = std::clamp(ratio, 1, 100);
 				Client::SetRingRatio(ratio);
 			}
@@ -95,19 +102,19 @@ namespace UnrealConsole
 				return;
 			}
 		}
-		else if (tokens[0] == STR("deathlink"))
+		else if (commandText == STR("deathlink"))
 		{
 			Client::ToggleDeathLink();
 		}
-		else if (tokens[0] == STR("ringlink"))
+		else if (commandText == STR("ringlink"))
 		{
 			Client::ToggleRingLink();
 		}
-		else if (tokens[0] == STR("hardringlink"))
+		else if (commandText == STR("hardringlink"))
 		{
 			Client::ToggleHardRingLink();
 		}
-		else if (tokens[0] == STR("disconnect"))
+		else if (commandText == STR("disconnect"))
 		{
 			Client::Disconnect();
 		}

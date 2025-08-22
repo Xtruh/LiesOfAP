@@ -100,7 +100,7 @@ public:
 
 					Output::send<LogLevel::Verbose>(STR("MAP: {}"), current_map);
 
-					static std::array<std::wstring, 3> map_names = { L"PSO_P", L"Init_P", L"Title_P" };
+					static std::array<std::wstring, 5> map_names = { L"PSO_P", L"Init_P", L"Title_P", L"Title2_P", L"Title3_P"};
 
 					if (std::find(map_names.begin(), map_names.end(), current_map) != map_names.end())
 					{

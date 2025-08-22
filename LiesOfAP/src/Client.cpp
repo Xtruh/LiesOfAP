@@ -432,9 +432,8 @@ void Client::SetRingRatio(int ratio)
 	toAdd = 0;
 
 	auto plain = std::format(L"Ring Link ratio set to {}", ringRatio);
-	auto markdown = std::format(L"<System>{}</>", plain);
 
-	GameData::PrintToConsole(markdown, plain);
+	GameData::PrintToConsole(plain);
 }
 
 void Client::UpdateTags()
@@ -455,9 +454,8 @@ void Client::UpdateTags()
 void Client::EchoRatio()
 {
 	auto plain = std::format(L"The current Ring Link Ratio is {}", ringRatio);
-	auto markdown = std::format(L"<System>{}</>", plain);
 
-	GameData::PrintToConsole(markdown, plain);
+	GameData::PrintToConsole(plain);
 }
 
 void Client::Say(const std::string message)
