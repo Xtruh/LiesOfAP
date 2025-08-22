@@ -195,6 +195,28 @@ void Client::Connect(const std::string uri, const std::string slotname, const st
 
 			ap->ConnectUpdate(false, 0, true, tags);
 		});
+	ap->set_socket_error_handler([](const std::string& error)
+		{
+			if (ap->get_player_number() >= 0)
+				GameData::PrintToConsole(L"Lost connection with the server. Attempting to reconnect...");
+			else
+				GameData::PrintToConsole(L"Could not connect to the server. Please double-check the address and ensure the server is active.");
+		});
+	ap->set_slot_refused_handler([](const std::list<std::string>& reasons)
+		{
+			std::string advice;
+			if (std::find(reasons.begin(), reasons.end(), "InvalidSlot") != reasons.end()
+				|| std::find(reasons.begin(), reasons.end(), "InvalidPassword") != reasons.end())
+			{
+				advice = "Please double-check your slot name and password.";
+			}
+			// Intentionally overwriting advice because slot name doesn't matter if the version is wrong.
+			if (std::find(reasons.begin(), reasons.end(), "IncompatibleVersion") != reasons.end())
+			{
+				advice = "Please double-check your client version.";
+			}
+			GameData::PrintToConsole(L"Could not connect to the server. " + StringOps::s2ws(advice));
+		});
 	ap->set_items_received_handler([](const std::list<APClient::NetworkItem>& items)
 		{
 			if (dc)
