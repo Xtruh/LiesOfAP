@@ -1203,7 +1203,7 @@ namespace ID
 			{L"Ch09_ItemSpot38", {560}},
 			{L"Ch09_ItemSpot51", {561}},
 			{L"Ch09_ItemSpot44", {562}},
-			{L"Letter_Factory_Beginners_book", {563}},
+			{L"Letter_Factory_Beginner's book", {563}},
 			{L"Ch09_ItemSpot47", {564}},
 			{L"Ch09_ItemSpot59", {565}},
 			{L"Ch09_ItemSpot45", {566}},
