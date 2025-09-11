@@ -1231,6 +1231,8 @@ namespace ID
 			{L"Ch08_ItemSpot77", {590}},
 			{L"Ch08_ItemSpot80", {591}},
 			{L"Ch08_ItemSpot81", {592, 593}},
+			{L"CH09_BlueFairy_Letter", {744}},
+			{L"Ch09_ItemSpot12", {745}},
 		};
 
 		std::map<std::wstring, std::vector<int>> Ch10 =
