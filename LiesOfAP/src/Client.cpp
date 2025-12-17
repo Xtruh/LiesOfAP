@@ -270,7 +270,12 @@ void Client::Connect(const std::string uri, const std::string slotname, const st
 			if (is_deathlink && GameData::IsLoaded())
 			{
 				isDead = true;
-				std::wstring source = StringOps::s2ws(data["data"]["cause"]);
+				std::wstring source;
+				if (data["data"].contains("cause")) // We have to do this because some apworld devs hate fun and whimsy : (
+					source = StringOps::s2ws(data["data"]["cause"]);
+				else
+					source = std::format(L"{} has died", StringOps::s2ws(data["data"]["source"]));
+
 				GameData::PrintToConsole(source, source);
 				GameData::ReceiveDeath();
 			}
