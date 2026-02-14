@@ -25,9 +25,9 @@ You can get the latest release from [the releases page](https://github.com/Xtruh
   ratio to `new_ratio` Min: 1 Max: 100
 
 # Mod Installation
-1. Go to the [Releases page](https://github.com/Xtruh/LiesOfAP/releases) and download the wich ever version is the same as the store your playing the game from.
+1. Go to the [Releases page](https://github.com/Xtruh/LiesOfAP/releases) and download the which ever version is the same as the store your playing the game from.
 2. Locate your lies of P install if on steam should look something like (\Steam\Steamapps\Common\Lies of P\LiesofP) Xbox like this (\XboxGames\Lies of P\Content\LiesofP)
-3. Extract the zip you downloaded and place the Liesofp folder so it is replacing the liesofp folder in the game directorly
+3. Extract the zip you downloaded and place the Liesofp folder so it is replacing the liesofp folder in the game directory
 
 # Generating a Game
 5. Go to the [Releases page](https://github.com/Xtruh/LiesOfAP/releases) and dowload the latest liesofp.apworld
