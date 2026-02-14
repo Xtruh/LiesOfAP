@@ -161,6 +161,8 @@ std::wstring GameData::GetSaveName()
 	if (!saveName)
 		return L"";
 
+
+
 	return saveName->GetCharArray();
 }
 
@@ -338,33 +340,33 @@ void GameData::CheckEnemySpots()
 			if (!dead)
 				continue;
 
-			auto spotCodename = NPCSpot->GetValuePtrByPropertyNameInChain<FName>(STR("SpotCodeName"));
+			auto spotCodename = NPCSpot->GetValuePtrByPropertyNameInChain<FString>(STR("SpotUniqueID"));
 			if (!spotCodename)
 			{
 				Output::send<LogLevel::Error>(STR("No Code name found?\n"));
 			}
 
-			if (spotCodename->ToString().starts_with(L"CH08_Puppet_Tomorrow_Electronic_Named_00"))
-			{
-				std::vector<int> locationIds;
-				auto id = NPCSpot->GetValuePtrByPropertyNameInChain<int>(STR("InstanceId"));
-				if (!id)
-					continue;
-				if (*id == 33) // First Puppet of the Future
-					locationIds = ID::LOCCODENAME_TO_ID[L"CH08_Puppet_Tomorrow_Electronic_Named_00_1"];
-				else // Second POTF
-					locationIds = ID::LOCCODENAME_TO_ID[L"CH08_Puppet_Tomorrow_Electronic_Named_00_2"];
+			//if (spotCodename->ToString().starts_with(L"CH08_Puppet_Tomorrow_Electronic_Named_00"))
+			//{
+			//	std::vector<int> locationIds;
+			//	auto id = NPCSpot->GetValuePtrByPropertyNameInChain<int>(STR("InstanceId"));
+			//	if (!id)
+			//		continue;
+			//	if (*id == 33) // First Puppet of the Future
+			//		locationIds = ID::LOCCODENAME_TO_ID[L"CH08_Puppet_Tomorrow_Electronic_Named_00_1"];
+			//	else // Second POTF
+			//		locationIds = ID::LOCCODENAME_TO_ID[L"CH08_Puppet_Tomorrow_Electronic_Named_00_2"];
 
-				for (int id : locationIds)
-					Client::SendCheck(id);
-			}
+			//	for (int id : locationIds)
+			//		Client::SendCheck(id);
+			//}
 
-			if (!ID::LOCCODENAME_TO_ID.contains(spotCodename->ToString()))
+			if (!ID::LOCCODENAME_TO_ID.contains(spotCodename->GetCharArray()))
 				continue;
 
 			//Output::send<LogLevel::Verbose>(STR("{}: ISDEAD||CODENAME: {}\n"), NPCSpot->GetName(), spotCodename->ToString());
 
-			std::vector<int> locationIds = ID::LOCCODENAME_TO_ID[spotCodename->ToString()];
+			std::vector<int> locationIds = ID::LOCCODENAME_TO_ID[spotCodename->GetCharArray()];
 			for (int id : locationIds)
 				Client::SendCheck(id);
 		}
@@ -443,9 +445,67 @@ bool GameData::CheckDeath()
 	return isDead;
 }
 
+bool GameData::CheckDLC()
+{
+	//Any failure will assume the dlc is enabled if this breaks things my bad
+
+	using namespace RC::Unreal;
+
+	//Get SaveGame
+	auto saveGame = UObjectGlobals::FindFirstOf(STR("LAccountSaveGame"));
+
+	if (!saveGame)
+	{
+		Output::send(STR("Couldn't get SaveGame Instance!\n"));
+		return true;
+	}
+
+	auto dlcSaveProperty = static_cast<FStructProperty*>(saveGame->GetPropertyByNameInChain(STR("DLCSaveData_Account")));
+
+	if (!dlcSaveProperty)
+	{
+		Output::send(STR("Couldn't get DLCSaveData Prop!\n"));
+		return true;
+	}
+
+	auto dlcSaveData = dlcSaveProperty->GetStruct();
+
+	if (!dlcSaveData)
+	{
+		Output::send(STR("Couldn't get DLCSaveData!\n"));
+		return true;
+	}
+
+	auto dlcSave = dlcSaveProperty->ContainerPtrToValuePtr<void>(saveGame);
+
+	if (!dlcSave)
+	{
+		Output::send(STR("Couldn't get DLC Save Instance!\n"));
+		return true;
+	}
+
+	auto appliedDLCsProperty = dlcSaveData->GetPropertyByNameInChain(STR("AppliedDLCs"));
+
+	if (!appliedDLCsProperty)
+	{
+		Output::send(STR("Couldn't get AppliedDLCs Prop!\n"));
+		return true;
+	}
+
+	auto appliedDLCs = appliedDLCsProperty->ContainerPtrToValuePtr<TMap<FString, FName>>(dlcSave);
+
+	if (!appliedDLCs)
+	{
+		Output::send(STR("Couldn't get AppliedDLCs!\n"));
+		return true;
+	}
+
+	return appliedDLCs->Contains(FString(L"2848330"));
+}
+
 bool GameData::ReceiveItem(int64_t id)
 {
-	if (id > 600 && id < 700)
+	if ((id > 600 && id < 700) || (id > 2100 && id < 2200))
 	{
 		return GiveWeapon(id);
 	}

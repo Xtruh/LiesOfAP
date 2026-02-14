@@ -28,3 +28,6 @@ target(projectName)
     add_defines("_WIN32_WINNT=0x0600")
 
     add_cxxflags("/Zc:__cplusplus")
+
+    add_cxflags("/bigobj", {tools = {"cl", "clang_cl"}})
+    add_mxflags("/bigobj", {tools = {"cl", "clang_cl"}})

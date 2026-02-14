@@ -4,6 +4,7 @@
 
 #include <format>
 #include <ctime>
+#include <bitset>
 
 #include "Mod/CppUserModBase.hpp"
 
@@ -20,9 +21,11 @@ std::string uuid(ap_get_uuid(""));
 int source = static_cast<int>(std::time(nullptr));
 const std::string game_name("Lies Of P");
 const std::string cert_store("ue4ss/Mods/LiesOfAP/dlls/cacert.pem");
+const int itemsPerUpdate = 10;
 bool init = false;
 bool dc = false;
 int lastReceivedIndex = -1;
+int dlcRequired = 0;
 bool deathLink = false;
 bool ringLink = false;
 bool hardRingLink = false;
@@ -32,19 +35,21 @@ int prevErgo = -1;
 int partialRings = 0;
 int toAdd = 0;
 int goal_id = 740; // Simon Manus Goal
+std::bitset<2> bossFlags{0b00}; // main 0 dlc 1
 std::set<int64_t> sent_ids;
 std::set<int64_t> toResend;
+std::queue<APClient::NetworkItem> receivedItems;
 
 
 std::wstring EncodeSaveName()
 {
-	// Format: {Seed},{slot},{lastReceivedIndex}
+	// Format: {Seed},{slot},{lastReceivedIndex},{dlcRequired},{bossFlags}
 	std::wstringstream stream;
 
 	if (!ap)
 		return L"";
 
-	stream << StringOps::s2ws(ap->get_seed()) << L',' << ap->get_player_number() << L',' << lastReceivedIndex;
+	stream << StringOps::s2ws(ap->get_seed()) << L',' << ap->get_player_number() << L',' << lastReceivedIndex << L','<< dlcRequired << L',' << bossFlags;
 
 	return stream.str();
 }
@@ -116,6 +121,7 @@ void Client::Connect(const std::string uri, const std::string slotname, const st
 	lastReceivedIndex = -1;
 	init = false;
 	dc = true;
+	dlcRequired = 0;
 	deathLink = false;
 	ringLink = false;
 	hardRingLink = false;
@@ -124,35 +130,50 @@ void Client::Connect(const std::string uri, const std::string slotname, const st
 	partialRings = 0;
 	toAdd = 0;
 	goal_id = 740; // Simon Manus Goal
+	bossFlags.reset();
 
 	ap = new APClient(uuid, game_name, uri, cert_store);
 	ap->set_room_info_handler([slotname, password]()
 		{
 			int items_handling = 0b111;
-			APClient::Version version{ 0, 6, 3 };
+			APClient::Version version{ 0, 6, 6 };
 
 			ap->ConnectSlot(slotname, password, items_handling, {}, version);
 		});
 	ap->set_slot_connected_handler([](const json& slot_data)
 		{
 			auto saveData = SplitSaveName(GameData::GetSaveName());
-			if (saveData.size() == 3)
+			if (saveData.size() >= 3)
 			{
 				if ((StringOps::ws2s(saveData[0]) != ap->get_seed()) || std::stoi(saveData[1]) != ap->get_player_number())
 				{
-					Output::send(STR("Slot mismatch load correct save"));
+					Output::send(STR("Slot mismatch load correct save, disconnecting"));
 					init = true;
 					return;
 				}
 
 				lastReceivedIndex = std::stoi(saveData[2]);
+
+				if (saveData.size() >= 4)
+				{
+					dlcRequired = std::stoi(saveData[3]);
+					if (dlcRequired == 1 && !GameData::CheckDLC())
+					{
+						GameData::PrintToConsole(L"DLC required for this slot, disconnecting");
+						init = true;
+						return;
+					}
+
+					if (saveData.size() == 5) bossFlags = std::bitset<2>(saveData[4]);
+				}
 			}
 
 			dc = false;
 			init = true;
 
 			Output::send(STR("index: {}"), lastReceivedIndex);
-			GameData::SetSaveName(EncodeSaveName());
+
+			Output::send(STR("Boss Flags: {}"), StringOps::s2ws(bossFlags.to_string()));
 
 			Output::send(STR("{}"), StringOps::s2ws(slot_data.dump()));
 
@@ -190,8 +211,32 @@ void Client::Connect(const std::string uri, const std::string slotname, const st
 					{
 						goal_id = 742; // Nameless Puppet
 					}
+					else if (value == 3 || value == 4) // Arlecchino(short or full)
+					{
+						goal_id = 1099;
+					}
+					else if (value == 5) // Simon Manus and Arlecchino
+					{
+						goal_id *= -1;
+					}
+					else if (value == 6) // Nameless Puppet and Arlecchino
+					{
+						goal_id = -742;
+					}
+				}
+				else if (key == "dlc_required" && value == true)
+				{
+					dlcRequired = 1;
+
+					if (!GameData::CheckDLC())
+					{
+						GameData::PrintToConsole(L"DLC required for this slot, Disconnecting");
+						dc = true;
+					}
 				}
 			}
+
+			GameData::SetSaveName(EncodeSaveName());
 
 			ap->ConnectUpdate(false, 0, true, tags);
 		});
@@ -227,21 +272,22 @@ void Client::Connect(const std::string uri, const std::string slotname, const st
 			{
 				if (item.index <= lastReceivedIndex)
 					continue;
-				bool recived = GameData::ReceiveItem(item.item);
-				if (recived)
+
+				if (item.item > 2000 && dlcRequired == 0) // Recieved a dlc item unexpectedly
 				{
-					lastReceivedIndex = item.index;
-					indexChanged = true;
+					Output::send(STR("Recieved a dlc item unexpectedly: {}"), item.item);
+					dlcRequired = 1;
+					if (!GameData::CheckDLC())
+					{
+						dc = true;
+						break;
+					}
 				}
-				else
-				{
-					toResend.insert(item.index);
-				}
+
+				receivedItems.push(item);
 
 			}
 
-			if (indexChanged)
-				GameData::SetSaveName(EncodeSaveName());
 		});
 	ap->set_print_json_handler([](const APClient::PrintJSONArgs& args)
 		{
@@ -306,7 +352,16 @@ void Client::SendCheck(int64_t id)
 	std::list<int64_t> id_list{ id };
 	ap->LocationChecks(id_list);
 
-	if (id == goal_id)
+	if (goal_id < 0)
+	{
+		if (id == std::abs(goal_id))
+			bossFlags[0] = true;
+		if (id == 1099)
+			bossFlags[1] = true;
+		if (bossFlags == 0b11)
+			SendGoal();
+	}
+	else if (id == goal_id)
 		SendGoal();
 }
 
@@ -512,6 +567,30 @@ void Client::PollServer()
 		GameData::SetErgoAmount(toAdd);
 		toAdd = 0;
 	}
+
+	bool indexChanged = false;
+
+	for (int i = 0; i < itemsPerUpdate; i++)
+	{
+		if (receivedItems.empty()) break;
+
+		auto item = receivedItems.front();
+
+		bool recived = GameData::ReceiveItem(item.item);
+		if (recived)
+		{
+			lastReceivedIndex = item.index;
+			indexChanged = true;
+			receivedItems.pop();
+		}
+		else
+		{
+			Output::send(STR("Item ID:{} Failed to send"), item.item);
+		}
+	}
+
+	if (indexChanged)
+		GameData::SetSaveName(EncodeSaveName());
 
 }
 

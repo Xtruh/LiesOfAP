@@ -16,6 +16,7 @@ namespace GameData
 	void CheckEnemySpots();
 	void CheckQuests();
 	bool CheckDeath();
+	bool CheckDLC();
 	bool ReceiveItem(int64_t id);
 	bool GiveItem(const std::wstring& codename);
 	bool GiveWeapon(int64_t id);
