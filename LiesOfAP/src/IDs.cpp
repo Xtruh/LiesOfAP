@@ -1497,7 +1497,7 @@ namespace ID
 			{L"Ch12_ItemSpot24", {672}},
 			{L"Ch12_ItemSpot16", {673}},
 			{L"Ch12_ItemSpot14", {674}},
-			{L"Npc-LV_Monastery_A_DSN-29", {675}}, // WHY ARE YOU 13 (this wont make sense now that enemy rando works)
+			{L"Npc-LV_Monastery_A_DSN-123", {675}}, // WHY ARE YOU 13 (this wont make sense now that enemy rando works)
 			{L"Ch12_ItemSpot17", {676}},
 			{L"Ch12_ItemSpot10", {677}},
 			{L"Ch12_ItemSpot18", {678}},

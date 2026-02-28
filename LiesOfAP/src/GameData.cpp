@@ -500,7 +500,7 @@ bool GameData::CheckDLC()
 		return true;
 	}
 
-	return appliedDLCs->Contains(FString(L"2848330"));
+	return (appliedDLCs->Contains(FString(L"2848330")) or appliedDLCs->Contains(FString(L"9N0BVHB735PD")));
 }
 
 bool GameData::ReceiveItem(int64_t id)
